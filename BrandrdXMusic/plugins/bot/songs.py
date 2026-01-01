@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 import yt_dlp
 from pyrogram import Client, filters
 from pyrogram.types import (
@@ -21,12 +22,57 @@ from BrandrdXMusic.utils.decorators.language import language, languageCB
 from BrandrdXMusic.utils.formatters import convert_bytes
 from BrandrdXMusic.utils.inline.song import song_markup
 
-# Song Module
+# ------------------------------------------------------------------
+# دالة تنزيل داخلية لضمان عمل التحميل (بديلة للدالة الخارجية المعطلة)
+# ------------------------------------------------------------------
+def download_internal(url, stype, format_id):
+    opts = {
+        "outtmpl": "downloads/%(id)s.%(ext)s",
+        "geo_bypass": True,
+        "nocheckcertificate": True,
+        "quiet": True,
+        "no_warnings": True,
+        "cookiefile": "cookies.txt" if os.path.exists("cookies.txt") else None
+    }
 
-@app.on_message(filters.command(["song"]))
+    if stype == "video":
+        opts["format"] = f"{format_id}+bestaudio/best"
+        opts["merge_output_format"] = "mp4"
+    else:
+        opts["format"] = "bestaudio/best"
+        opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }]
+
+    try:
+        with yt_dlp.YoutubeDL(opts) as ytdl:
+            info = ytdl.extract_info(url, download=True)
+            filename = ytdl.prepare_filename(info)
+            
+            if stype == "audio":
+                base, _ = os.path.splitext(filename)
+                return f"{base}.mp3"
+            elif stype == "video":
+                base, _ = os.path.splitext(filename)
+                return f"{base}.mp4"
+            return filename
+    except Exception as e:
+        print(f"Download Error: {e}")
+        raise e 
+
+# ------------------------------------------------------------------
+# Song Module
+# ------------------------------------------------------------------
+
+@app.on_message(filters.command(["song", "يوت", "بحث"], prefixes=["", "/"]) & ~BANNED_USERS)
 @language
 async def song_commad_private(client, message: Message, _):
-    await message.delete()
+    # لا نقوم بحذف الرسالة إذا لم تكن تحتوي على "/" لتجنب المشاكل في المجموعات
+    if message.text.startswith("/"):
+        await message.delete()
+        
     url = await YouTube.url(message)
     if url:
         if not await YouTube.exists(url):
@@ -57,6 +103,7 @@ async def song_commad_private(client, message: Message, _):
     else:
         if len(message.command) < 2:
             return await message.reply_text(_["song_2"])
+    
     mystic = await message.reply_text(_["play_1"])
     query = message.text.split(None, 1)[1]
     try:
@@ -207,26 +254,36 @@ async def song_download_cb(client, callback_query: CallbackQuery, _) :
     stype, format_id, vidid = callback_request.split("|")
     mystic = await callback_query.edit_message_text(_["song_8"])
     yturl = f"https://www.youtube.com/watch?v={vidid}"
+    
+    # جلب المعلومات فقط للاسم والمدة
     with yt_dlp.YoutubeDL({"quiet": True}) as ytdl:
         x = ytdl.extract_info(yturl, download=False)
+    
     title = (x["title"]).title()
     title = re.sub("\W+", " ", title)
-    thumb_image_path = await callback_query.message.download()
-    duration = x["duration"]
-    if stype == "video":
+    
+    try:
         thumb_image_path = await callback_query.message.download()
-        width = callback_query.message.photo.width
-        height = callback_query.message.photo.height
+    except:
+        thumb_image_path = None
+        
+    duration = x["duration"]
+    
+    if stype == "video":
+        if thumb_image_path:
+            width = callback_query.message.photo.width
+            height = callback_query.message.photo.height
+        else:
+            width = 1280
+            height = 720
+            
         try:
-            file_path = await YouTube.download(
-                yturl,
-                mystic,
-                songvideo=True,
-                format_id=format_id,
-                title=title,
-            )
+            # هنا التغيير: استخدام الدالة الداخلية بدلاً من الخارجية
+            loop = asyncio.get_event_loop()
+            file_path = await loop.run_in_executor(None, download_internal, yturl, "video", format_id)
         except Exception as e:
             return await mystic.edit_text(_["song_9"].format(e))
+            
         med = InputMediaVideo(
             media=file_path,
             duration=duration,
@@ -247,17 +304,16 @@ async def song_download_cb(client, callback_query: CallbackQuery, _) :
             print(e)
             return await mystic.edit_text(_["song_10"])
         os.remove(file_path)
+        if thumb_image_path: os.remove(thumb_image_path)
+            
     elif stype == "audio":
         try:
-            filename = await YouTube.download(
-                yturl,
-                mystic,
-                songaudio=True,
-                format_id=format_id,
-                title=title,
-            )
+            # هنا التغيير: استخدام الدالة الداخلية بدلاً من الخارجية
+            loop = asyncio.get_event_loop()
+            filename = await loop.run_in_executor(None, download_internal, yturl, "audio", format_id)
         except Exception as e:
             return await mystic.edit_text(_["song_9"].format(e))
+            
         med = InputMediaAudio(
             media=filename,
             caption=title,
@@ -276,3 +332,4 @@ async def song_download_cb(client, callback_query: CallbackQuery, _) :
             print(e)
             return await mystic.edit_text(_["song_10"])
         os.remove(filename)
+        if thumb_image_path: os.remove(thumb_image_path)
