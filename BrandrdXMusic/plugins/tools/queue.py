@@ -36,7 +36,13 @@ def get_duration(playing):
 
 
 @app.on_message(
-    filters.command(["queue", "cqueue", "player", "cplayer", "playing", "cplaying"])
+    filters.command(
+        [
+            "queue", "cqueue", "player", "cplayer", "playing", "cplaying",
+            "قائمة", "الانتظار", "دور", "الدور", "مشغل", "شغال"
+        ],
+        prefixes=["/", "!", ".", ""]
+    )
     & filters.group
     & ~BANNED_USERS
 )
@@ -54,17 +60,20 @@ async def get_queue(client, message: Message, _):
     else:
         chat_id = message.chat.id
         cplay = False
+    
     if not await is_active_chat(chat_id):
         return await message.reply_text(_["general_5"])
     got = db.get(chat_id)
     if not got:
         return await message.reply_text(_["queue_2"])
+    
     file = got[0]["file"]
     videoid = got[0]["vidid"]
     user = got[0]["by"]
     title = (got[0]["title"]).title()
     typo = (got[0]["streamtype"]).title()
     DUR = get_duration(got)
+    
     if "live_" in file:
         IMAGE = get_image(videoid)
     elif "vid_" in file:
@@ -82,8 +91,10 @@ async def get_queue(client, message: Message, _):
             IMAGE = config.SOUNCLOUD_IMG_URL
         else:
             IMAGE = get_image(videoid)
+            
     send = _["queue_6"] if DUR == "Unknown" else _["queue_7"]
     cap = _["queue_8"].format(app.mention, title, typo, user, send)
+    
     upl = (
         queue_markup(_, DUR, "c" if cplay else "g", videoid)
         if DUR == "Unknown"
@@ -98,6 +109,7 @@ async def get_queue(client, message: Message, _):
     )
     basic[videoid] = True
     mystic = await message.reply_photo(IMAGE, caption=cap, reply_markup=upl)
+    
     if DUR != "Unknown":
         try:
             while db[chat_id][0]["vidid"] == videoid:
@@ -165,17 +177,16 @@ async def queued_tracks(client, CallbackQuery: CallbackQuery, _):
     for x in got:
         j += 1
         if j == 1:
-            msg += f'Streaming :\n\n✨ Title : {x["title"]}\nDuration : {x["dur"]}\nBy : {x["by"]}\n\n'
+            msg += f'💞 **جاري التشغيل :**\n\n♥️ **العنوان :** {x["title"]}\n🤎 **المدة :** {x["dur"]}\n🧚 **طلب :** {x["by"]}\n\n'
         elif j == 2:
-            msg += f'Queued :\n\n✨ Title : {x["title"]}\nDuration : {x["dur"]}\nBy : {x["by"]}\n\n'
+            msg += f'🥀 **في الانتظار :**\n\n♥️ **العنوان :** {x["title"]}\n🤎 **المدة :** {x["dur"]}\n🧚 **طلب :** {x["by"]}\n\n'
         else:
-            msg += f'✨ Title : {x["title"]}\nDuration : {x["dur"]}\nBy : {x["by"]}\n\n'
-    if "Queued" in msg:
+            msg += f'♥️ **العنوان :** {x["title"]}\n🤎 **المدة :** {x["dur"]}\n🧚 **طلب :** {x["by"]}\n\n'
+    if "في الانتظار" in msg:
         if len(msg) < 700:
             await asyncio.sleep(1)
             return await CallbackQuery.edit_message_text(msg, reply_markup=buttons)
-        if "✨" in msg:
-            msg = msg.replace("✨", "")
+        
         link = await HottyBin(msg)
         med = InputMediaPhoto(media=link, caption=_["queue_3"].format(link))
         await CallbackQuery.edit_message_media(media=med, reply_markup=buttons)
