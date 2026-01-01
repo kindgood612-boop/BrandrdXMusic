@@ -10,33 +10,49 @@ from config import BANNED_USERS
 @app.on_callback_query(filters.regex("LiveStream") & ~BANNED_USERS)
 @languageCB
 async def play_live_stream(client, CallbackQuery, _):
+    # استخراج البيانات من الزر
     callback_data = CallbackQuery.data.strip()
     callback_request = callback_data.split(None, 1)[1]
     vidid, user_id, mode, cplay, fplay = callback_request.split("|")
+    
+    # التحقق من أن الشخص الذي ضغط الزر هو من طلب الأمر
     if CallbackQuery.from_user.id != int(user_id):
         try:
-            return await CallbackQuery.answer(_["playcb_1"], show_alert=True)
+            return await CallbackQuery.answer("هذا الأمر ليس لك يا عزيزي 🧚", show_alert=True)
         except:
             return
+    
+    # التحقق من وضع تشغيل القنوات
     try:
         chat_id, channel = await get_channeplayCB(_, cplay, CallbackQuery)
     except:
         return
+    
     video = True if mode == "v" else None
     user_name = CallbackQuery.from_user.first_name
+    
+    # حذف الرسالة القديمة وتنظيف الشات
     await CallbackQuery.message.delete()
     try:
-        await CallbackQuery.answer()
+        await CallbackQuery.answer("جاري المعالجة...", show_alert=False)
     except:
         pass
-    mystic = await CallbackQuery.message.reply_text(
-        _["play_2"].format(channel) if channel else _["play_1"]
+    
+    # إرسال رسالة الانتظار
+    mystic = await client.send_message(
+        chat_id,
+        f"**جاري بدء البث المباشر عبر القناة...**\n\n**القناة:** {channel}" if channel else "**جاري بدء تشغيل البث المباشر 🧚...**"
     )
+    
+    # جلب معلومات الفيديو من يوتيوب
     try:
         details, track_id = await YouTube.track(vidid, True)
     except:
-        return await mystic.edit_text(_["play_3"])
+        return await mystic.edit_text("فشل في جلب معلومات الفيديو، حاول مرة أخرى لاحقاً.")
+    
     ffplay = True if fplay == "f" else None
+    
+    # التحقق مما إذا كان الفيديو بث مباشر فعلاً (مدة البث المباشر عادة تكون 0 أو غير محددة)
     if not details["duration_min"]:
         try:
             await stream(
@@ -53,8 +69,13 @@ async def play_live_stream(client, CallbackQuery, _):
             )
         except Exception as e:
             ex_type = type(e).__name__
-            err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
-            return await mystic.edit_text(err)
+            err = e if ex_type == "AssistantErr" else f"حدث خطأ غير متوقع: {ex_type}"
+            return await mystic.edit_text(f"**حدث خطأ أثناء التشغيل:**\n{err}")
     else:
-        return await mystic.edit_text("» ɴᴏᴛ ᴀ ʟɪᴠᴇ sᴛʀᴇᴀᴍ.")
-    await mystic.delete()
+        return await mystic.edit_text("» **عذراً، هذا الرابط ليس بثاً مباشراً (Live Stream).**")
+    
+    # تنظيف رسالة الانتظار في حال النجاح (يتم التعامل معها داخل دالة الستريم عادة، لكن هذا للأمان)
+    try:
+        await mystic.delete()
+    except:
+        pass
