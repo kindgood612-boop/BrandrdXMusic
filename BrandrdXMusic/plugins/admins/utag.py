@@ -12,28 +12,28 @@ SPAM_CHATS = {}
 
 
 @app.on_message(
-    filters.command(["utag", "uall"], prefixes=["/", "@", ".", "#"]) & admin_filter
+    filters.command(["utag", "uall", "تاك لانهائي", "منشن لانهائي"], prefixes=["/", "@", ".", "#", ""]) & admin_filter
 )
 async def tag_all_users(_, message):
     global SPAM_CHATS
     chat_id = message.chat.id
     if len(message.text.split()) == 1:
         await message.reply_text(
-            "** ɢɪᴠᴇ sᴏᴍᴇ ᴛᴇxᴛ ᴛᴏ ᴛᴀɢ ᴀʟʟ, ʟɪᴋᴇ »** `@utag Hi Friends`"
+            "**اكتب النص الذي تريد نشره مع الأمر، مثال »** `تاك لانهائي هلا والله`"
         )
         return
 
     text = message.text.split(None, 1)[1]
     if text:
         await message.reply_text(
-            "**ᴜᴛᴀɢ [ᴜɴʟɪᴍɪᴛᴇᴅ ᴛᴀɢ] sᴛᴀʀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**\n\n**๏ ᴛᴀɢɢɪɴɢ ᴡɪᴛʜ sʟᴇᴇᴘ ᴏғ 7 sᴇᴄ.**\n\n**➥ ᴏғғ ᴛᴀɢɢɪɴɢ ʙʏ » /stoputag**"
+            "**بدأت عملية المنشن اللانهائي (5 أعضاء) بنجاح!**\n\n**๏ الفاصل الزمني: 7 ثواني.**\n\n**➥ للإيقاف أرسل » /stoputag أو ايقاف المنشن**"
         )
 
     SPAM_CHATS[chat_id] = True
     f = True
     while f:
         if SPAM_CHATS.get(chat_id) == False:
-            await message.reply_text("**ᴜɴʟɪᴍɪᴛᴇᴅ ᴛᴀɢɢɪɴɢ sᴜᴄᴄᴇssғᴜʟʟʏ sᴛᴏᴘᴘᴇᴅ.**")
+            await message.reply_text("**تم إيقاف عملية المنشن اللانهائي بنجاح.**")
             break
         usernum = 0
         usertxt = ""
@@ -46,7 +46,7 @@ async def tag_all_users(_, message):
                 if usernum == 5:
                     await app.send_message(
                         message.chat.id,
-                        f"{text}\n{usertxt}\n\n|| ➥ ᴏғғ ᴛᴀɢɢɪɴɢ ʙʏ » /stoputag ||",
+                        f"{text}\n{usertxt}\n\n|| ➥ للإيقاف أرسل » /stoputag ||",
                     )
                     usernum = 0
                     usertxt = ""
@@ -57,8 +57,8 @@ async def tag_all_users(_, message):
 
 @app.on_message(
     filters.command(
-        ["stoputag", "stopuall", "offutag", "offuall", "utagoff", "ualloff"],
-        prefixes=["/", ".", "@", "#"],
+        ["stoputag", "stopuall", "offutag", "offuall", "utagoff", "ualloff", "ايقاف المنشن", "ايقاف التاك", "بس منشن"],
+        prefixes=["/", ".", "@", "#", ""],
     )
     & admin_filter
 )
@@ -67,6 +67,6 @@ async def stop_tagging(_, message):
     chat_id = message.chat.id
     if SPAM_CHATS.get(chat_id) == True:
         SPAM_CHATS[chat_id] = False
-        return await message.reply_text("**ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ sᴛᴏᴘᴘɪɴɢ ᴜɴʟɪᴍɪᴛᴇᴅ ᴛᴀɢɢɪɴɢ...**")
+        return await message.reply_text("**جاري إيقاف المنشن اللانهائي، يرجى الانتظار...**")
     else:
-        await message.reply_text("**ᴜᴛᴀɢ ᴘʀᴏᴄᴇss ɪs ɴᴏᴛ ᴀᴄᴛɪᴠᴇ**")
+        await message.reply_text("**لا توجد عملية منشن لانهائي شغالة حالياً**")
