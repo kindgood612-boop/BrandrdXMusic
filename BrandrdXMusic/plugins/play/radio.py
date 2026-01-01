@@ -1,4 +1,5 @@
 import logging
+import asyncio 
 
 from pyrogram import filters
 from pyrogram.enums import ChatMemberStatus
@@ -24,39 +25,41 @@ from BrandrdXMusic.utils.database import (
 from BrandrdXMusic.utils.logger import play_logs
 from BrandrdXMusic.utils.stream.stream import stream
 
+# تم تحديث القائمة بإذاعات مصرية فقط وبجودة عالية
 RADIO_STATION = {
-    "Air Bilaspur": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio110/playlist.m3u8",
-    "Air Raipur": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio118/playlist.m3u8",
-    "Capital FM": "http://media-ice.musicradio.com/CapitalMP3?.mp3&listening-from-radio-garden=1616312105154",
-    "English": "https://hls-01-regions.emgsound.ru/11_msk/playlist.m3u8",
-    "Mirchi": "http://peridot.streamguys.com:7150/Mirchi",
-    "Radio Today": "http://stream.zenolive.com/8wv4d8g4344tv",
-    "YouTube": "https://www.youtube.com/live/eu191hR_LEc?si=T-9QYD548jd0Mogp",
-    "Zee News": "https://www.youtube.com/live/TPcmrPrygDc?si=hiHBkIidgurQAd1P",
-    "Aaj Tak": "https://www.youtube.com/live/Nq2wYlWFucg?si=usY4UYiSBInKA0S1",
+    "Nogoum FM": "https://ssl.mz-audiostreaming.com/nogoumfm",
+    "Nile FM": "https://ssl.mz-audiostreaming.com/nilefm",
+    "Nagham FM": "https://ssl.mz-audiostreaming.com/naghamfm",
+    "Mega FM": "https://ssl.mz-audiostreaming.com/megafm",
+    "El Radio 9090": "https://9090streaming.mobtada.com/9090FMEGYPT",
+    "Radio Masr": "https://live.radiomasr.net/RADIOMASR",
+    "Quran Cairo": "https://stream.radiojar.com/8s5u5tpdtwzuv",
+    "Mahatat Masr": "https://s3.radio.co/s95f66299d/listen",
+    "Sha3by FM": "https://radio.masr.me/sha3byfm",
+    "On Sport FM": "https://stream.radiojar.com/4884313205tv",
 }
 
 valid_stations = "\n".join([f"`{name}`" for name in sorted(RADIO_STATION.keys())])
 
 
 @app.on_message(
-    filters.command(["radioplayforce", "radio", "cradio"])
+    filters.command(["radioplayforce", "radio", "cradio", "راديو"])
     & filters.group
     & ~BANNED_USERS
 )
 async def radio(client, message: Message):
-    msg = await message.reply_text("ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ᴍᴏᴍᴇɴᴛ....")
+    msg = await message.reply_text("جـارِ الاتـصـال بـالـبـث الـمـبـاشـر...")
     try:
         try:
             userbot = await get_assistant(message.chat.id)
             get = await app.get_chat_member(message.chat.id, userbot.id)
         except ChatAdminRequired:
             return await msg.edit_text(
-                f"» ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴs ᴛᴏ ɪɴᴠɪᴛᴇ ᴜsᴇʀs ᴠɪᴀ ʟɪɴᴋ ғᴏʀ ɪɴᴠɪᴛɪɴɢ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}."
+                f"» لا أمـلـك صـلاحـيـة دعـوة الـمـسـتـخـدمـيـن لـإضـافـة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}."
             )
         if get.status == ChatMemberStatus.BANNED:
             return await msg.edit_text(
-                text=f"» {userbot.mention} ᴀssɪsᴛᴀɴᴛ ɪs ʙᴀɴɴᴇᴅ ɪɴ {message.chat.title}\n\n𖢵 ɪᴅ : `{userbot.id}`\n𖢵 ɴᴀᴍᴇ : {userbot.mention}\n𖢵 ᴜsᴇʀɴᴀᴍᴇ : @{userbot.username}\n\nᴘʟᴇᴀsᴇ ᴜɴʙᴀɴ ᴛʜᴇ ᴀssɪsᴛᴀɴᴛ ᴀɴᴅ ᴘʟᴀʏ ᴀɢᴀɪɴ...",
+                text=f"» {userbot.mention} الـمـسـاعـد مـحـظـور فـي {message.chat.title}\n\n𖢵 الآيـدي : `{userbot.id}`\n𖢵 الاسـم : {userbot.mention}\n𖢵 الـيـوزر : @{userbot.username}\n\nيـرجـى رفـع الـحـظـر عـن الـمـسـاعـد والـمـحـاولـة مـرة أخـرى...",
             )
     except UserNotParticipant:
         if message.chat.username:
@@ -70,34 +73,34 @@ async def radio(client, message: Message):
                 invitelink = await client.export_chat_invite_link(message.chat.id)
             except ChatAdminRequired:
                 return await msg.edit_text(
-                    f"» ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴs ᴛᴏ ɪɴᴠɪᴛᴇ ᴜsᴇʀs ᴠɪᴀ ʟɪɴᴋ ғᴏʀ ɪɴᴠɪᴛɪɴɢ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}."
+                    f"» لا أمـلـك صـلاحـيـة دعـوة الـمـسـتـخـدمـيـن لـإضـافـة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}."
                 )
             except InviteRequestSent:
                 try:
                     await app.approve_chat_join_request(message.chat.id, userbot.id)
                 except Exception as e:
                     return await msg.edit(
-                        f"ғᴀɪʟᴇᴅ ᴛᴏ ɪɴᴠɪᴛᴇ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}.\n\n**ʀᴇᴀsᴏɴ :** `{ex}`"
+                        f"فـشـلـت فـي دعـوة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}.\n\n**الـسـبـب :** `{ex}`"
                     )
             except Exception as ex:
                 if "channels.JoinChannel" in str(ex) or "Username not found" in str(ex):
                     return await msg.edit_text(
-                        f"» ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴs ᴛᴏ ɪɴᴠɪᴛᴇ ᴜsᴇʀs ᴠɪᴀ ʟɪɴᴋ ғᴏʀ ɪɴᴠɪᴛɪɴɢ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}."
+                        f"» لا أمـلـك صـلاحـيـة دعـوة الـمـسـتـخـدمـيـن لـإضـافـة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}."
                     )
                 else:
                     return await msg.edit_text(
-                        f"ғᴀɪʟᴇᴅ ᴛᴏ ɪɴᴠɪᴛᴇ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}.\n\n**ʀᴇᴀsᴏɴ :** `{ex}`"
+                        f"فـشـلـت فـي دعـوة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}.\n\n**الـسـبـب :** `{ex}`"
                     )
         if invitelink.startswith("https://t.me/+"):
             invitelink = invitelink.replace("https://t.me/+", "https://t.me/joinchat/")
         anon = await msg.edit_text(
-            f"ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...\n\nɪɴᴠɪᴛɪɴɢ {userbot.mention} ᴛᴏ {message.chat.title}."
+            f"يـرجـى الانـتـظـار...\n\nجـارِ دعـوة {userbot.mention} إلـى {message.chat.title}."
         )
         try:
             await userbot.join_chat(invitelink)
             await asyncio.sleep(2)
             await msg.edit_text(
-                f"{userbot.mention} ᴊᴏɪɴᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ,\n\nsᴛᴀʀᴛɪɴɢ sᴛʀᴇᴀᴍ..."
+                f"تـم انـضـمـام {userbot.mention} بـنـجـاح،\n\nبـدء الـبـث..."
             )
         except UserAlreadyParticipant:
             pass
@@ -106,16 +109,16 @@ async def radio(client, message: Message):
                 await app.approve_chat_join_request(message.chat.id, userbot.id)
             except Exception as e:
                 return await msg.edit(
-                    f"ғᴀɪʟᴇᴅ ᴛᴏ ɪɴᴠɪᴛᴇ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}.\n\n**ʀᴇᴀsᴏɴ :** `{ex}`"
+                    f"فـشـلـت فـي دعـوة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}.\n\n**الـسـبـب :** `{ex}`"
                 )
         except Exception as ex:
             if "channels.JoinChannel" in str(ex) or "Username not found" in str(ex):
                 return await msg.edit_text(
-                    f"» ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴs ᴛᴏ ɪɴᴠɪᴛᴇ ᴜsᴇʀs ᴠɪᴀ ʟɪɴᴋ ғᴏʀ ɪɴᴠɪᴛɪɴɢ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}."
+                    f"» لا أمـلـك صـلاحـيـة دعـوة الـمـسـتـخـدمـيـن لـإضـافـة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}."
                 )
             else:
                 return await msg.edit_text(
-                    f"ғᴀɪʟᴇᴅ ᴛᴏ ɪɴᴠɪᴛᴇ {userbot.mention} ᴀssɪsᴛᴀɴᴛ ᴛᴏ {message.chat.title}.\n\n**ʀᴇᴀsᴏɴ :** `{ex}`"
+                    f"فـشـلـت فـي دعـوة {userbot.mention} الـمـسـاعـد إلـى {message.chat.title}.\n\n**الـسـبـب :** `{ex}`"
                 )
 
         try:
@@ -123,9 +126,24 @@ async def radio(client, message: Message):
         except:
             pass
     await msg.delete()
+    
+    # تحسين استخراج اسم المحطة ليدعم الأسماء التي تحتوي مسافات
+    if len(message.command) < 2:
+        return await message.reply(
+            f"**الـرجـاء اخـتـيـار إذاعـة لـتـشـغـيـلـهـا:**\n\n{valid_stations}\n\n**مـثـال:**\n`/radio Nogoum FM`"
+        )
+        
     station_name = " ".join(message.command[1:])
-    RADIO_URL = RADIO_STATION.get(station_name)
-    if RADIO_URL:
+    
+    # البحث عن المحطة (Case Insensitive) للتعامل مع الأحرف الكبيرة والصغيرة
+    target_station = None
+    for station in RADIO_STATION:
+        if station.lower() == station_name.lower():
+            target_station = station
+            break
+            
+    if target_station:
+        RADIO_URL = RADIO_STATION[target_station]
         language = await get_lang(message.chat.id)
         _ = get_string(language)
         playmode = await get_playmode(message.chat.id)
@@ -171,12 +189,12 @@ async def radio(client, message: Message):
             ex_type = type(e).__name__
             err = e if ex_type == "AssistantErr" else _["general_3"].format(ex_type)
             return await mystic.edit_text(err)
-        return await play_logs(message, streamtype="M3u8 or Index Link")
+        return await play_logs(message, streamtype=f"Radio: {target_station}")
     else:
         await message.reply(
-            f"ɢɪᴠᴇ ᴍᴇ ᴀ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ ᴛᴏ ᴘʟᴀʏ ʀᴀᴅɪᴏ\nʙᴇʟᴏᴡ ᴀʀᴇ sᴏᴍᴇ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ:\n{valid_stations}"
+            f"**لـم يـتـم الـعـثـور عـلـى الـمـحـطـة.**\nاخـتـر مـن الـقـائـمـة أدناه:\n\n{valid_stations}"
         )
 
 
-__MODULE__ = "Rᴀᴅɪᴏ"
-__HELP__ = f"\n/radio [sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ] - ᴛᴏ ᴘʟᴀʏ **ʀᴀᴅɪᴏ ɪɴ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ**\n\nʙᴇʟᴏᴡ ᴀʀᴇ sᴏᴍᴇ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ:\n{valid_stations}"
+__MODULE__ = "الراديو"
+__HELP__ = f"\n/radio [اسم المحطة] - لـتـشـغـيـل **الـراديـو الـمـصـري**\n\n**الـمـحـطـات الـمـتـاحـة:**\n{valid_stations}"
