@@ -204,7 +204,6 @@ async def addition(client, CallbackQuery, _):
     current = await get_upvote_count(CallbackQuery.message.chat.id)
     if mode == "M":
         final = current - 2
-        print(final)
         if final == 0:
             return await CallbackQuery.answer(
                 _["setting_11"],
@@ -215,7 +214,6 @@ async def addition(client, CallbackQuery, _):
         await set_upvotes(CallbackQuery.message.chat.id, final)
     else:
         final = current + 2
-        print(final)
         if final == 17:
             return await CallbackQuery.answer(
                 _["setting_12"],
