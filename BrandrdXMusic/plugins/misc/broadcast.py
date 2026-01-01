@@ -19,10 +19,9 @@ from config import adminlist
 
 IS_BROADCASTING = False
 
-
-@app.on_message(filters.command("broadcast") & SUDOERS)
+@app.on_message(filters.command(["broadcast", "اذاعه", "اذاعة", "نشر"]) & SUDOERS)
 @language
-async def braodcast_message(client, message, _):
+async def broadcast_message(client, message, _):
     global IS_BROADCASTING
     if message.reply_to_message:
         x = message.reply_to_message.id
@@ -31,6 +30,8 @@ async def braodcast_message(client, message, _):
         if len(message.command) < 2:
             return await message.reply_text(_["broad_2"])
         query = message.text.split(None, 1)[1]
+        
+        # تنظيف النص من الأوامر الإضافية
         if "-pin" in query:
             query = query.replace("-pin", "")
         if "-nobot" in query:
@@ -47,6 +48,7 @@ async def braodcast_message(client, message, _):
     IS_BROADCASTING = True
     await message.reply_text(_["broad_1"])
 
+    # القسم الأول: الإذاعة للمجموعات (إلا إذا تم استثناؤها بـ -nobot)
     if "-nobot" not in message.text:
         sent = 0
         pin = 0
@@ -87,6 +89,7 @@ async def braodcast_message(client, message, _):
         except:
             pass
 
+    # القسم الثاني: الإذاعة للخاص (الأعضاء)
     if "-user" in message.text:
         susr = 0
         served_users = []
@@ -114,10 +117,13 @@ async def braodcast_message(client, message, _):
         except:
             pass
 
+    # القسم الثالث: الإذاعة عن طريق الحساب المساعد
     if "-assistant" in message.text:
         aw = await message.reply_text(_["broad_5"])
         text = _["broad_6"]
-        from AnonXMusic.core.userbot import assistants
+        
+        # هنا كان الخطأ وتم إصلاحه ليتناسب مع سورس BrandrdXMusic
+        from BrandrdXMusic.core.userbot import assistants
 
         for num in assistants:
             sent = 0
