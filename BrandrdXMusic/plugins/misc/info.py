@@ -9,12 +9,13 @@ from pyrogram.types import *
 from typing import Union, Optional
 import random
 
+# تم وضع 5 روابط عشوائية من القائمة التي أرسلتها
 random_photo = [
-    "https://telegra.ph/file/1949480f01355b4e87d26.jpg",
-    "https://telegra.ph/file/3ef2cc0ad2bc548bafb30.jpg",
-    "https://telegra.ph/file/a7d663cd2de689b811729.jpg",
-    "https://telegra.ph/file/6f19dc23847f5b005e922.jpg",
-    "https://telegra.ph/file/2973150dd62fd27a3a6ba.jpg",
+    "https://files.catbox.moe/kmn0a6.jpg",
+    "https://files.catbox.moe/wqipfn.jpg",
+    "https://files.catbox.moe/xi3mb1.jpg",
+    "https://files.catbox.moe/ht74e3.jpg",
+    "https://files.catbox.moe/7lvv4u.jpg",
 ]
 
 # --------------------------------------------------------------------------------- #
@@ -71,19 +72,18 @@ font_path = "BrandrdXMusic/assets/hiroko.ttf"
 
 # --------------------------------------------------------------------------------- #
 
-
 INFO_TEXT = """**
 ❅─────✧❅✦❅✧─────❅
-            ✦ ᴜsᴇʀ ɪɴғᴏ ✦
+            ✦ **مـعـلـومـات الـعـضـو** ✦
 
-➻ ᴜsᴇʀ ɪᴅ ‣ **`{}`
-**➻ ғɪʀsᴛ ɴᴀᴍᴇ ‣ **{}
-**➻ ʟᴀsᴛ ɴᴀᴍᴇ ‣ **{}
-**➻ ᴜsᴇʀɴᴀᴍᴇ ‣ **`{}`
-**➻ ᴍᴇɴᴛɪᴏɴ ‣ **{}
-**➻ ʟᴀsᴛ sᴇᴇɴ ‣ **{}
-**➻ ᴅᴄ ɪᴅ ‣ **{}
-**➻ ʙɪᴏ ‣ **`{}`
+➻ **الآيـدي** ‣ `{}`
+➻ **الاسـم** ‣ {}
+➻ **الـلـقـب** ‣ {}
+➻ **الـمـعـرف** ‣ `{}`
+➻ **الـمـنـشـن** ‣ {}
+➻ **آخـر ظـهـور** ‣ {}
+➻ **الـداتـا** ‣ {}
+➻ **الـنـبـذة** ‣ `{}`
 
 **❅─────✧❅✦❅✧─────❅**
 """
@@ -95,24 +95,23 @@ async def userstatus(user_id):
       user = await app.get_users(user_id)
       x = user.status
       if x == enums.UserStatus.RECENTLY:
-         return "Recently."
+         return "قريباً."
       elif x == enums.UserStatus.LAST_WEEK:
-          return "Last week."
+          return "منذ أسبوع."
       elif x == enums.UserStatus.LONG_AGO:
-          return "Long time ago."
+          return "منذ زمن طويل."
       elif x == enums.UserStatus.OFFLINE:
-          return "Offline."
+          return "غير متصل."
       elif x == enums.UserStatus.ONLINE:
-         return "Online."
+         return "متصل."
    except:
-        return "**sᴏᴍᴇᴛʜɪɴɢ ᴡʀᴏɴɢ ʜᴀᴘᴘᴇɴᴇᴅ !**"
+        return "**حـدث خـطـأ مـا !**"
     
 
 # --------------------------------------------------------------------------------- #
 
 
-
-@app.on_message(filters.command(["info", "userinfo"], prefixes=["/", "!", "%", ",", "", ".", "@", "#"]))
+@app.on_message(filters.command(["info", "userinfo", "كشف", "ايدي"], prefixes=["/", "!", "%", ",", "", ".", "@", "#"]))
 async def userinfo(_, message):
     chat_id = message.chat.id
     user_id = message.from_user.id
@@ -126,10 +125,10 @@ async def userinfo(_, message):
             id = user_info.id
             dc_id = user.dc_id
             first_name = user_info.first_name 
-            last_name = user_info.last_name if user_info.last_name else "No last name"
-            username = user_info.username if user_info.username else "No Username"
+            last_name = user_info.last_name if user_info.last_name else "لا يوجد"
+            username = user_info.username if user_info.username else "لا يوجد"
             mention = user.mention
-            bio = user_info.bio if user_info.bio else "No bio set"
+            bio = user_info.bio if user_info.bio else "لا توجد نبذة"
             
             if user.photo:
                 # User has a profile photo
@@ -157,10 +156,10 @@ async def userinfo(_, message):
             id = user_info.id
             dc_id = user.dc_id
             first_name = user_info.first_name 
-            last_name = user_info.last_name if user_info.last_name else "No last name"
-            username = user_info.username if user_info.username else "No Username"
+            last_name = user_info.last_name if user_info.last_name else "لا يوجد"
+            username = user_info.username if user_info.username else "لا يوجد"
             mention = user.mention
-            bio = user_info.bio if user_info.bio else "No bio set"
+            bio = user_info.bio if user_info.bio else "لا توجد نبذة"
             
             if user.photo:
                 # User has a profile photo
@@ -189,10 +188,10 @@ async def userinfo(_, message):
             id = user_info.id
             dc_id = user.dc_id
             first_name = user_info.first_name 
-            last_name = user_info.last_name if user_info.last_name else "No last name"
-            username = user_info.username if user_info.username else "No Username"
+            last_name = user_info.last_name if user_info.last_name else "لا يوجد"
+            username = user_info.username if user_info.username else "لا يوجد"
             mention = user.mention
-            bio = user_info.bio if user_info.bio else "No bio set"
+            bio = user_info.bio if user_info.bio else "لا توجد نبذة"
             
             if user.photo:
                 # User has a profile photo
