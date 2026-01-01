@@ -1,7 +1,7 @@
 import asyncio
 import os
 import time
-from random import randint
+from random import randint, choice
 from time import time
 from typing import Dict, List, Union
 
@@ -21,19 +21,21 @@ from BrandrdXMusic.utils.inline.playlist import (
 )
 from BrandrdXMusic.utils.pastebin import HottyBin
 from BrandrdXMusic.utils.stream.stream import stream
+from BrandrdXMusic.core.mongo import mongodb
 
-# Define a dictionary to track the last message timestamp for each user
+# تعريف متغيرات الحماية من السبام
 user_last_message_time = {}
 user_command_count = {}
-# Define the threshold for command spamming (e.g., 20 commands within 60 seconds)
 SPAM_THRESHOLD = 2
 SPAM_WINDOW_SECONDS = 5
-from BrandrdXMusic.core.mongo import mongodb
 
 playlistdb = mongodb.playlist
 playlist = []
-# Playlist Databse
 
+# قائمة القلوب المطلوبة
+HEART_EMOJIS = ["💖", "🤍", "💕", "🤎"]
+
+# --- دوال قاعدة البيانات ---
 
 async def _get_playlists(chat_id: int) -> Dict[str, int]:
     _notes = await playlistdb.find_one({"chat_id": chat_id})
@@ -81,43 +83,37 @@ async def delete_playlist(chat_id: int, name: str) -> bool:
     return False
 
 
-# Command
-ADDPLAYLIST_COMMAND = "addplaylist"
-PLAYLIST_COMMAND = "playlist"
-DELETEPLAYLIST_COMMAND = "delplaylist"
+# --- الأوامر ---
 
-
-@app.on_message(filters.command(PLAYLIST_COMMAND) & ~BANNED_USERS)
+@app.on_message(filters.command(["playlist", "قائمتي", "قائمة التشغيل", "القائمة", "قائمه", "عرض القائمة", "ماي ليست"]) & ~BANNED_USERS)
 @language
 async def check_playlist(client, message: Message, _):
+    emo = choice(HEART_EMOJIS)
     user_id = message.from_user.id
     current_time = time()
-    # Update the last message timestamp for the user
     last_message_time = user_last_message_time.get(user_id, 0)
 
     if current_time - last_message_time < SPAM_WINDOW_SECONDS:
-        # If less than the spam window time has passed since the last message
         user_last_message_time[user_id] = current_time
         user_command_count[user_id] = user_command_count.get(user_id, 0) + 1
         if user_command_count[user_id] > SPAM_THRESHOLD:
-            # Block the user if they exceed the threshold
             hu = await message.reply_text(
-                f"**{message.from_user.mention} ᴘʟᴇᴀsᴇ ᴅᴏɴᴛ ᴅᴏ sᴘᴀᴍ, ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴀғᴛᴇʀ 5 sᴇᴄ**"
+                f"**{message.from_user.mention} ➜ رجـاءً لا تـكـرر الأمـر بـسـرعـة {emo}**"
             )
             await asyncio.sleep(3)
             await hu.delete()
             return
     else:
-        # If more than the spam window time has passed, reset the command count and update the message timestamp
         user_command_count[user_id] = 1
         user_last_message_time[user_id] = current_time
 
     _playlist = await get_playlist_names(message.from_user.id)
     if _playlist:
-        get = await message.reply_text(_["playlist_2"])
+        get = await message.reply_text(f"**جـاري جـلـب قـائـمـتـك الـتـشـغـيـلـيـة... {emo}**")
     else:
-        return await message.reply_text(_["playlist_3"])
-    msg = _["playlist_4"]
+        return await message.reply_text(f"**قـائـمـة الـتـشـغـيـل الـخـاصـة بـك فـارغـة {emo}**")
+    
+    msg = "**هـذه هـي قـائـمـة الـتـشـغـيـل الـخـاصـة بـك:**\n"
     count = 0
     for shikhar in _playlist:
         _note = await get_playlist(message.from_user.id, shikhar)
@@ -126,16 +122,21 @@ async def check_playlist(client, message: Message, _):
         duration = _note["duration"]
         count += 1
         msg += f"\n\n{count}- {title[:70]}\n"
-        msg += _["playlist_5"].format(duration)
+        msg += f"الـمـدة: {duration}"
+    
     link = await HottyBin(msg)
     lines = msg.count("\n")
     if lines >= 17:
         car = os.linesep.join(msg.split(os.linesep)[:17])
     else:
         car = msg
-    carbon = await Carbon.generate(car, randint(100, 10000000000))
-    await get.delete()
-    await message.reply_photo(carbon, caption=_["playlist_15"].format(link))
+    
+    try:
+        carbon = await Carbon.generate(car, randint(100, 10000000000))
+        await get.delete()
+        await message.reply_photo(carbon, caption=f"**[اضـغـط هـنـا لـعـرض الـقـائـمـة كـامـلـة]({link}) {emo}**")
+    except:
+        await get.edit_text(msg)
 
 
 async def get_keyboard(_, user_id):
@@ -154,51 +155,50 @@ async def get_keyboard(_, user_id):
         )
     keyboard.row(
         InlineKeyboardButton(
-            text=_["PL_B_5"],
+            text="حـذف الـقـائـمـة بـالـكـامـل",
             callback_data=f"delete_warning",
         ),
-        InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
+        InlineKeyboardButton(text="إغـلاق", callback_data=f"close"),
     )
     return keyboard, count
 
 
-@app.on_message(filters.command(DELETEPLAYLIST_COMMAND) & ~BANNED_USERS)
+@app.on_message(filters.command(["delplaylist", "حذف القائمة", "حذف من القائمة", "حذف اغنية", "مسح القائمة"]) & ~BANNED_USERS)
 @language
 async def del_plist_msg(client, message: Message, _):
+    emo = choice(HEART_EMOJIS)
     user_id = message.from_user.id
     current_time = time()
-    # Update the last message timestamp for the user
     last_message_time = user_last_message_time.get(user_id, 0)
 
     if current_time - last_message_time < SPAM_WINDOW_SECONDS:
-        # If less than the spam window time has passed since the last message
         user_last_message_time[user_id] = current_time
         user_command_count[user_id] = user_command_count.get(user_id, 0) + 1
         if user_command_count[user_id] > SPAM_THRESHOLD:
-            # Block the user if they exceed the threshold
             hu = await message.reply_text(
-                f"**{message.from_user.mention} ᴘʟᴇᴀsᴇ ᴅᴏɴᴛ ᴅᴏ sᴘᴀᴍ, ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴀғᴛᴇʀ 5 sᴇᴄ**"
+                f"**{message.from_user.mention} ➜ رجـاءً لا تـكـرر الأمـر بـسـرعـة {emo}**"
             )
             await asyncio.sleep(3)
             await hu.delete()
             return
     else:
-        # If more than the spam window time has passed, reset the command count and update the message timestamp
         user_command_count[user_id] = 1
         user_last_message_time[user_id] = current_time
 
     _playlist = await get_playlist_names(message.from_user.id)
     if _playlist:
-        get = await message.reply_text(_["playlist_2"])
+        get = await message.reply_text(f"**جـاري جـلـب قـائـمـة الـحـذف... {emo}**")
     else:
-        return await message.reply_text(_["playlist_3"])
+        return await message.reply_text(f"**قـائـمـة الـتـشـغـيـل فـارغـة بـالـفـعـل {emo}**")
+    
     keyboard, count = await get_keyboard(_, message.from_user.id)
-    await get.edit_text(_["playlist_7"].format(count), reply_markup=keyboard)
+    await get.edit_text(f"**لـديـك {count} أغـنـيـة فـي الـقـائـمـة، اضـغـط لـحـذفـهـا:**", reply_markup=keyboard)
 
 
 @app.on_callback_query(filters.regex("play_playlist") & ~BANNED_USERS)
 @languageCB
 async def play_playlist(client, CallbackQuery, _):
+    emo = choice(HEART_EMOJIS)
     callback_data = CallbackQuery.data.strip()
     mode = callback_data.split(None, 1)[1]
     user_id = CallbackQuery.from_user.id
@@ -206,7 +206,7 @@ async def play_playlist(client, CallbackQuery, _):
     if not _playlist:
         try:
             return await CallbackQuery.answer(
-                _["playlist_3"],
+                "قـائـمـة الـتـشـغـيـل فـارغـة",
                 show_alert=True,
             )
         except:
@@ -220,7 +220,7 @@ async def play_playlist(client, CallbackQuery, _):
     except:
         pass
     video = True if mode == "v" else None
-    mystic = await CallbackQuery.message.reply_text(_["play_1"])
+    mystic = await CallbackQuery.message.reply_text(f"**جـاري بـدء تـشـغـيـل قـائـمـتـك {emo}...**")
     for vidids in _playlist:
         result.append(vidids)
     try:
@@ -237,23 +237,24 @@ async def play_playlist(client, CallbackQuery, _):
         )
     except Exception as e:
         ex_type = type(e).__name__
-        err = e if ex_type == "AssistantErr" else _["general_3"].format(ex_type)
+        err = e if ex_type == "AssistantErr" else f"حـدث خـطـأ: {ex_type}"
         return await mystic.edit_text(err)
     return await mystic.delete()
 
 
 @app.on_message(
-    filters.command(["playplaylist", "vplayplaylist"]) & ~BANNED_USERS & filters.group
+    filters.command(["playplaylist", "vplayplaylist", "تشغيل القائمة", "تشغيل قائمتي", "بلاي ماي ليست", "شغل القائمة"]) & ~BANNED_USERS & filters.group
 )
 @languageCB
 async def play_playlist_command(client, message, _):
+    emo = choice(HEART_EMOJIS)
     mode = message.command[0][0]
     user_id = message.from_user.id
     _playlist = await get_playlist_names(user_id)
     if not _playlist:
         try:
             return await message.reply(
-                _["playlist_3"],
+                f"**قـائـمـة الـتـشـغـيـل الـخـاصـة بـك فـارغـة {emo}**",
                 quote=True,
             )
         except:
@@ -269,7 +270,7 @@ async def play_playlist_command(client, message, _):
 
     result = []
     video = True if mode == "v" else None
-    mystic = await message.reply_text(_["play_1"])
+    mystic = await message.reply_text(f"**جـاري بـدء تـشـغـيـل قـائـمـتـك {emo}...**")
 
     for vidids in _playlist:
         result.append(vidids)
@@ -288,27 +289,32 @@ async def play_playlist_command(client, message, _):
         )
     except Exception as e:
         ex_type = type(e).__name__
-        err = e if ex_type == "AssistantErr" else _["general_3"].format(ex_type)
+        err = e if ex_type == "AssistantErr" else f"حـدث خـطـأ: {ex_type}"
         return await mystic.edit_text(err)
 
     return await mystic.delete()
 
 
 # Combined add_playlist function
-@app.on_message(filters.command(ADDPLAYLIST_COMMAND) & ~BANNED_USERS)
+@app.on_message(filters.command(["addplaylist", "اضف للقائمة", "اضافة للقائمة", "حفظ في القائمة", "ادد ليست"]) & ~BANNED_USERS)
 @language
 async def add_playlist(client, message: Message, _):
+    emo = choice(HEART_EMOJIS)
     if len(message.command) < 2:
         return await message.reply_text(
-            "**➻ ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴍᴇ ᴀ sᴏɴɢ ɴᴀᴍᴇ ᴏʀ sᴏɴɢ ʟɪɴᴋ ᴏʀ ʏᴏᴜᴛᴜʙᴇ ᴘʟᴀʏʟɪsᴛ ʟɪɴᴋ ᴀғᴛᴇʀ ᴛʜᴇ ᴄᴏᴍᴍᴀɴᴅ..**\n\n**➥ ᴇxᴀᴍᴘʟᴇs:**\n\n▷ `/addplaylist Blue Eyes` (ᴘᴜᴛ ᴀ sᴘᴇᴄɪғɪᴄ sᴏɴɢ ɴᴀᴍᴇ)\n\n▷ /addplaylist [ʏᴏᴜᴛᴜʙᴇ ᴘʟᴀʏʟɪsᴛ ʟɪɴᴋ] (ᴛᴏ ᴀᴅᴅ ᴀʟʟ sᴏɴɢs ғʀᴏᴍ ᴀ ʏᴏᴜᴛᴜʙᴇ ᴘʟᴀʏʟɪsᴛ ɪɴ ʙᴏᴛ ᴘʟᴀʏʟɪsᴛ.)"
+            f"**طـريـقـة الإضـافـة إلـى قـائـمـتـك الـخـاصـة {emo}:**\n\n"
+            f"**يـجـب كـتـابـة اسـم الأغـنـيـة أو الـرابـط بـعـد الأمـر مـبـاشـرة.**\n\n"
+            f"**• أمـثـلـة لـلاسـتـخـدام:**\n"
+            f"1️⃣ **بـالاسـم:** `ادد ليست سـورة الـبـقـرة`\n"
+            f"2️⃣ **بـالـرابـط:** `ادد ليست [رابـط الـفـيـديـو]`"
         )
 
     query = message.command[1]
 
-    # Check if the provided input is a YouTube playlist link
+    # اضافة قائمة يوتيوب كاملة
     if "youtube.com/playlist" in query:
         adding = await message.reply_text(
-            "**🎧 ᴀᴅᴅɪɴɢ sᴏɴɢs ɪɴ ᴘʟᴀʏʟɪsᴛ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ..**"
+            f"**🎧 جـاري إضـافـة أغـانـي قـائـمـة الـيـوتـيـوب لـلـقـائـمـة الـخـاصـة بـك... {emo}**"
         )
         try:
             from pytube import Playlist, YouTube
@@ -317,12 +323,11 @@ async def add_playlist(client, message: Message, _):
             video_urls = playlist.video_urls
 
         except Exception as e:
-            # Handle exception
-            return await message.reply_text(f"Error: {e}")
+            return await message.reply_text(f"خـطـأ: {e}")
 
         if not video_urls:
             return await message.reply_text(
-                "**➻ ɴᴏ sᴏɴɢs ғᴏᴜɴᴅ ɪɴ ᴛʜᴇ ᴘʟᴀʏʟɪsᴛ ʟɪɴᴋs.\n\n**➥ ᴛʀʏ ᴏᴛʜᴇʀ ᴘʟᴀʏʟɪsᴛ ʟɪɴᴋ**"
+                "**➻ لـم يـتـم الـعـثـور عـلـى أغـانـي فـي الـرابـط.**"
             )
 
         user_id = message.from_user.id
@@ -334,7 +339,7 @@ async def add_playlist(client, message: Message, _):
                 title = yt.title
                 duration = yt.length
             except Exception as e:
-                return await message.reply_text(f"ᴇʀʀᴏʀ ғᴇᴛᴄʜɪɴɢ ᴠɪᴅᴇᴏ ɪɴғᴏ: {e}")
+                return await message.reply_text(f"خـطـأ فـي جـلـب الـمـعـلـومـات: {e}")
 
             plist = {
                 "videoid": video_id,
@@ -347,7 +352,7 @@ async def add_playlist(client, message: Message, _):
                 [
                     [
                         InlineKeyboardButton(
-                            "๏ ᴡᴀɴᴛ ʀᴇᴍᴏᴠᴇ ᴀɴʏ sᴏɴɢs? ๏",
+                            "حـذف أغـانـي؟",
                             callback_data=f"open_playlist {user_id}",
                         )
                     ]
@@ -355,81 +360,31 @@ async def add_playlist(client, message: Message, _):
             )
         await adding.delete()
         return await message.reply_text(
-            text="**➻ ᴀʟʟ sᴏɴɢs ʜᴀs ʙᴇᴇɴ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ ғʀᴏᴍ ʏᴏᴜʀ ʏᴏᴜᴛᴜʙᴇ ᴘʟᴀʏʟɪsᴛ ʟɪɴᴋ✅**\n\n**➥ ɪғ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀɴʏ sᴏɴɢ ᴛʜᴇɴ ᴄʟɪᴄᴋ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ.\n\n**▷ ᴄʜᴇᴄᴋ ʙʏ » /playlist**\n\n▷ **ᴘʟᴀʏ ʙʏ » /play**",
+            text=f"**➻ تـم إضـافـة أغـانـي قـائـمـة الـيـوتـيـوب لـقـائـمـتـك بـنـجـاح {emo}**\n\n**▷ تـحـقـق عـبـر: قائمتي**\n\n▷ **شـغـل عـبـر: بلاي ماي ليست**",
             reply_markup=keyboardes,
         )
 
-    if "youtube.com/@" in query:
-        addin = await message.reply_text(
-            "**🎧 ᴀᴅᴅɪɴɢ sᴏɴɢs ɪɴ ᴘʟᴀʏʟɪsᴛ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ..**"
-        )
-        try:
-            from pytube import YouTube
-
-            channel_username = query
-            videos = YouTube_videos(f"{query}/videos")
-            video_urls = [video["url"] for video in videos]
-
-        except Exception as e:
-            # Handle exception
-            return await message.reply_text(f"Error: {e}")
-
-        if not video_urls:
-            return await message.reply_text(
-                "**➻ ɴᴏ sᴏɴɢs ғᴏᴜɴᴅ ɪɴ ᴛʜᴇ YouTube channel.\n\n**➥ ᴛʀʏ ᴏᴛʜᴇʀ YouTube channel ʟɪɴᴋ**"
-            )
-
-        user_id = message.from_user.id
-        for video_url in video_urls:
-            videosid = query.split("/")[-1].split("?")[0]
-
-            try:
-                yt = YouTube(f"https://youtu.be/{videosid}")
-                title = yt.title
-                duration = yt.length
-            except Exception as e:
-                return await message.reply_text(f"ᴇʀʀᴏʀ ғᴇᴛᴄʜɪɴɢ ᴠɪᴅᴇᴏ ɪɴғᴏ: {e}")
-
-            plist = {
-                "videoid": video_id,
-                "title": title,
-                "duration": duration,
-            }
-
-            await save_playlist(user_id, video_id, plist)
-            keyboardes = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "๏ ᴡᴀɴᴛ ʀᴇᴍᴏᴠᴇ ᴀɴʏ sᴏɴɢs? ๏",
-                            callback_data=f"open_playlist {user_id}",
-                        )
-                    ]
-                ]
-            )
-        await addin.delete()
-        return await message.reply_text(
-            text="**➻ ᴀʟʟ sᴏɴɢs ʜᴀs ʙᴇᴇɴ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ ғʀᴏᴍ ʏᴏᴜʀ ʏᴏᴜᴛᴜʙᴇ channel ʟɪɴᴋ✅**\n\n**➥ ɪғ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀɴʏ sᴏɴɢ ᴛʜᴇɴ ᴄʟɪᴄᴋ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ.\n\n**▷ ᴄʜᴇᴄᴋ ʙʏ » /playlist**\n\n▷ **ᴘʟᴀʏ ʙʏ » /play**",
-            reply_markup=keyboardes,
-        )
-
-    # Check if the provided input is a YouTube video link
-    if "https://youtu.be" in query:
+    # اضافة رابط فيديو يوتيوب
+    if "https://youtu.be" in query or "youtube.com/watch" in query:
         try:
             add = await message.reply_text(
-                "**🎧 ᴀᴅᴅɪɴɢ sᴏɴɢs ɪɴ ᴘʟᴀʏʟɪsᴛ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ..**"
+                f"**🎧 جـاري الإضـافـة... {emo}**"
             )
-            from pytube import Playlist, YouTube
+            from pytube import YouTube
 
-            # Extract video ID from the YouTube lin
-            videoid = query.split("/")[-1].split("?")[0]
+            # استخراج الايدي بطريقة ابسط
+            if "youtu.be" in query:
+                videoid = query.split("/")[-1].split("?")[0]
+            else:
+                videoid = query.split("v=")[1].split("&")[0]
+
             user_id = message.from_user.id
             thumbnail = f"https://img.youtube.com/vi/{videoid}/maxresdefault.jpg"
             _check = await get_playlist(user_id, videoid)
             if _check:
                 try:
                     await add.delete()
-                    return await message.reply_photo(thumbnail, caption=_["playlist_8"])
+                    return await message.reply_photo(thumbnail, caption=f"**هـذه الأغـنـيـة مـوجـودة بـالـفـعـل فـي قـائـمـتـك! {emo}**")
                 except KeyError:
                     pass
 
@@ -438,7 +393,7 @@ async def add_playlist(client, message: Message, _):
             if count == SERVER_PLAYLIST_LIMIT:
                 try:
                     return await message.reply_text(
-                        _["playlist_9"].format(SERVER_PLAYLIST_LIMIT)
+                        f"**عـذراً، لـقـد وصـلـت لـلـحـد الأقـصـى لـلـقـائـمـة ({SERVER_PLAYLIST_LIMIT}) {emo}**"
                     )
                 except KeyError:
                     pass
@@ -447,7 +402,6 @@ async def add_playlist(client, message: Message, _):
                 yt = YouTube(f"https://youtu.be/{videoid}")
                 title = yt.title
                 duration = yt.length
-                thumbnail = f"https://img.youtube.com/vi/{videoid}/maxresdefault.jpg"
                 plist = {
                     "videoid": videoid,
                     "title": title,
@@ -455,12 +409,11 @@ async def add_playlist(client, message: Message, _):
                 }
                 await save_playlist(user_id, videoid, plist)
 
-                # Create inline keyboard with remove button
                 keyboard = InlineKeyboardMarkup(
                     [
                         [
                             InlineKeyboardButton(
-                                "๏ Remove from Playlist ๏",
+                                "حـذف مـن الـقـائـمـة",
                                 callback_data=f"remove_playlist {videoid}",
                             )
                         ]
@@ -469,7 +422,7 @@ async def add_playlist(client, message: Message, _):
                 await add.delete()
                 await message.reply_photo(
                     thumbnail,
-                    caption="**➻ ᴀᴅᴅᴇᴅ sᴏɴɢ ɪɴ ʏᴏᴜʀ ʙᴏᴛ ᴘʟᴀʏʟɪsᴛ✅**\n\n**➥ ᴄʜᴇᴄᴋ ʙʏ » /playlist**\n\n**➥ ᴅᴇʟᴇᴛᴇ ʙʏ » /delplaylist**\n\n**➥ ᴀɴᴅ ᴘʟᴀʏ ʙʏ » /play (ɢʀᴏᴜᴘs ᴏɴʟʏ)**",
+                    caption=f"**➻ تـمـت الإضـافـة لـقـائـمـتـك بـنـجـاح {emo}**\n\n**➥ تـحـقـق عـبـر: قائمتي**\n**➥ لـلـحـذف: حذف القائمة**",
                     reply_markup=keyboard,
                 )
             except Exception as e:
@@ -478,31 +431,29 @@ async def add_playlist(client, message: Message, _):
         except Exception as e:
             return await message.reply_text(str(e))
     else:
+        # البحث بالاسم
         from BrandrdXMusic import YouTube
 
-        # Add a specific song by name
         query = " ".join(message.command[1:])
-        print(query)
-
+        
         try:
             results = YoutubeSearch(query, max_results=1).to_dict()
+            if not results:
+                 return await message.reply_text("**لـم يـتـم الـعـثـور عـلـى نـتـائـج.**")
+            
             link = f"https://youtube.com{results[0]['url_suffix']}"
             title = results[0]["title"][:40]
             thumbnail = results[0]["thumbnails"][0]
             thumb_name = f"{title}.jpg"
             thumb = requests.get(thumbnail, allow_redirects=True)
             open(thumb_name, "wb").write(thumb.content)
-            duration = results[0]["duration"]
             videoid = results[0]["id"]
-            # Add these lines to define views and channel_name
-            views = results[0]["views"]
-            channel_name = results[0]["channel"]
-
+            
             user_id = message.from_user.id
             _check = await get_playlist(user_id, videoid)
             if _check:
                 try:
-                    return await message.reply_photo(thumbnail, caption=_["playlist_8"])
+                    return await message.reply_photo(thumbnail, caption=f"**هـذه الأغـنـيـة مـوجـودة بـالـفـعـل فـي قـائـمـتـك! {emo}**")
                 except KeyError:
                     pass
 
@@ -511,12 +462,12 @@ async def add_playlist(client, message: Message, _):
             if count == SERVER_PLAYLIST_LIMIT:
                 try:
                     return await message.reply_text(
-                        _["playlist_9"].format(SERVER_PLAYLIST_LIMIT)
+                       f"**عـذراً، لـقـد وصـلـت لـلـحـد الأقـصـى لـلـقـائـمـة ({SERVER_PLAYLIST_LIMIT}) {emo}**"
                     )
                 except KeyError:
                     pass
 
-            m = await message.reply("**🔄 ᴀᴅᴅɪɴɢ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ... **")
+            m = await message.reply(f"**🔄 جـاري الإضـافـة... {emo}**")
             title, duration_min, _, _, _ = await YouTube.details(videoid, True)
             title = (title[:50]).title()
             plist = {
@@ -527,12 +478,11 @@ async def add_playlist(client, message: Message, _):
 
             await save_playlist(user_id, videoid, plist)
 
-            # Create inline keyboard with remove button
             keyboard = InlineKeyboardMarkup(
                 [
                     [
                         InlineKeyboardButton(
-                            "๏ Remove from Playlist ๏",
+                            "حـذف مـن الـقـائـمـة",
                             callback_data=f"remove_playlist {videoid}",
                         )
                     ]
@@ -541,12 +491,16 @@ async def add_playlist(client, message: Message, _):
             await m.delete()
             await message.reply_photo(
                 thumbnail,
-                caption="**➻ ᴀᴅᴅᴇᴅ sᴏɴɢ ɪɴ ʏᴏᴜʀ ʙᴏᴛ ᴘʟᴀʏʟɪsᴛ✅**\n\n**➥ ᴄʜᴇᴄᴋ ʙʏ » /playlist**\n\n**➥ ᴅᴇʟᴇᴛᴇ ʙʏ » /delplaylist**\n\n**➥ ᴀɴᴅ ᴘʟᴀʏ ʙʏ » /play (ɢʀᴏᴜᴘs ᴏɴʟʏ)**",
+                caption=f"**➻ تـمـت الإضـافـة لـقـائـمـتـك بـنـجـاح {emo}**\n\n**➥ تـحـقـق عـبـر: قائمتي**\n**➥ لـلـحـذف: حذف القائمة**",
                 reply_markup=keyboard,
             )
+            try:
+                os.remove(thumb_name)
+            except:
+                pass
 
         except KeyError:
-            return await message.reply_text("ɪɴᴠᴀʟɪᴅ ᴅᴀᴛᴀ ғᴏʀᴍᴀᴛ ʀᴇᴄᴇɪᴠᴇᴅ.")
+            return await message.reply_text("حـدث خـطـأ فـي الـبـيـانـات.")
         except Exception as e:
             pass
 
@@ -554,50 +508,52 @@ async def add_playlist(client, message: Message, _):
 @app.on_callback_query(filters.regex("open_playlist") & ~BANNED_USERS)
 @languageCB
 async def open_playlist(client, CallbackQuery, _):
+    emo = choice(HEART_EMOJIS)
     _playlist = await get_playlist_names(CallbackQuery.from_user.id)
     if _playlist:
-        get = await CallbackQuery.message.edit_text(_["playlist_2"])
+        get = await CallbackQuery.message.edit_text(f"**جـاري جـلـب الـقـائـمـة... {emo}**")
     else:
-        return await CallbackQuery.message.edit_text(_["playlist_3"])
+        return await CallbackQuery.message.edit_text(f"**الـقـائـمـة فـارغـة {emo}**")
     keyboard, count = await get_keyboard(_, CallbackQuery.from_user.id)
-    await get.edit_text(_["playlist_7"].format(count), reply_markup=keyboard)
+    await get.edit_text(f"**لـديـك {count} أغـنـيـة فـي الـقـائـمـة:**", reply_markup=keyboard)
 
 
 @app.on_callback_query(filters.regex("remove_playlist") & ~BANNED_USERS)
 @languageCB
 async def del_plist(client, CallbackQuery, _):
+    emo = choice(HEART_EMOJIS)
     callback_data = CallbackQuery.data.strip()
     videoid = callback_data.split(None, 1)[1]
-    user_id = CallbackQuery.from_user.id
     deleted = await delete_playlist(CallbackQuery.from_user.id, videoid)
     if deleted:
         try:
-            await CallbackQuery.answer(_["playlist_11"], show_alert=True)
+            await CallbackQuery.answer(f"تـم الـحـذف بـنـجـاح {emo}", show_alert=True)
         except:
             pass
     else:
         try:
-            return await CallbackQuery.answer(_["playlist_12"], show_alert=True)
+            return await CallbackQuery.answer("حـدث خـطـأ او الأغـنـيـة غـيـر مـوجـودة", show_alert=True)
         except:
             return
     keyboards = InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
-                    "๏ ʀᴇᴄᴏᴠᴇʀ ʏᴏᴜʀ sᴏɴɢ ๏", callback_data=f"recover_playlist {videoid}"
+                    "اسـتـرجـاع الأغـنـيـة", callback_data=f"recover_playlist {videoid}"
                 )
             ]
         ]
     )
     return await CallbackQuery.edit_message_text(
-        text="**➻ ʏᴏᴜʀ sᴏɴɢ ʜᴀs ʙᴇᴇɴ ᴅᴇʟᴇᴛᴇᴅ ғʀᴏᴍ ʏᴏᴜʀ ʙᴏᴛ ᴘʟᴀʏʟɪsᴛ**\n\n**➥ ɪғ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʀᴇᴄᴏᴠᴇʀ ʏᴏᴜʀ sᴏɴɢ ɪɴ ʏᴏᴜʀ ᴘʟᴀʏʟɪsᴛ ᴛʜᴇɴ ᴄʟɪᴄᴋ ɢɪᴠᴇɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ**",
+        text=f"**➻ تـم حـذف الأغـنـيـة مـن قـائـمـتـك {emo}**\n\n**➥ لـلاسـتـرجـاع اضـغـط الـزر فـي الأسـفـل.**",
         reply_markup=keyboards,
     )
 
 
 @app.on_callback_query(filters.regex("recover_playlist") & ~BANNED_USERS)
 @languageCB
-async def add_playlist(client, CallbackQuery, _):
+async def recover_playlist(client, CallbackQuery, _):
+    emo = choice(HEART_EMOJIS)
     from BrandrdXMusic import YouTube
 
     callback_data = CallbackQuery.data.strip()
@@ -606,7 +562,7 @@ async def add_playlist(client, CallbackQuery, _):
     _check = await get_playlist(user_id, videoid)
     if _check:
         try:
-            return await CallbackQuery.answer(_["playlist_8"], show_alert=True)
+            return await CallbackQuery.answer("مـوجـودة بـالـفـعـل!", show_alert=True)
         except:
             return
     _count = await get_playlist_names(user_id)
@@ -614,7 +570,7 @@ async def add_playlist(client, CallbackQuery, _):
     if count == SERVER_PLAYLIST_LIMIT:
         try:
             return await CallbackQuery.answer(
-                _["playlist_9"].format(SERVER_PLAYLIST_LIMIT),
+                "الـذاكـرة مـمـتـلـئـة!",
                 show_alert=True,
             )
         except:
@@ -639,13 +595,13 @@ async def add_playlist(client, CallbackQuery, _):
             [
                 [
                     InlineKeyboardButton(
-                        "๏ ʀᴇᴍᴏᴠᴇ ᴀɢᴀɪɴ ๏", callback_data=f"remove_playlist {videoid}"
+                        "حـذف مـجـدداً", callback_data=f"remove_playlist {videoid}"
                     )
                 ]
             ]
         )
         return await CallbackQuery.edit_message_text(
-            text="**➻ ʀᴇᴄᴏᴠᴇʀᴇᴅ sᴏɴɢ ɪɴ ʏᴏᴜʀ ᴘʟᴀʏʟɪsᴛ**\n\n**➥ Cʜᴇᴄᴋ Pʟᴀʏʟɪsᴛ ʙʏ /playlist**\n\n**➥ ᴅᴇʟᴇᴛᴇ ᴘʟᴀʏʟɪsᴛ ʙʏ » /delplaylist**\n\n**➥ ᴀɴᴅ ᴘʟᴀʏ ᴘʟᴀʏʟɪsᴛ ʙʏ » /play**",
+            text=f"**➻ تـم اسـتـرجـاع الأغـنـيـة لـلـقـائـمـة {emo}**",
             reply_markup=keyboardss,
         )
     except:
@@ -654,16 +610,17 @@ async def add_playlist(client, CallbackQuery, _):
 
 @app.on_callback_query(filters.regex("add_playlist") & ~BANNED_USERS)
 @languageCB
-async def add_playlist(client, CallbackQuery, _):
+async def add_playlist_cb(client, CallbackQuery, _):
     await CallbackQuery.answer(
-        "➻ ᴛᴏ ᴀᴅᴅ ᴀ sᴏɴɢ ɪɴ ʏᴏᴜʀ ᴘʟᴀʏʟɪsᴛ ᴊᴜsᴛ ᴛʏᴘᴇ /addplaylist (Here your song name)\n\n➥ ᴇxᴀᴍᴘʟᴇ » /addplaylist Blue Eyes Blue tyes.",
+        "طـريـقـة الإضـافـة:\nاكـتـب الأمـر وبـجـانـبـه اسـم الأغـنـيـة\nمـثـال: ادد ليست سـورة الـبـقـرة",
         show_alert=True,
     )
 
 
 @app.on_callback_query(filters.regex("branded_playlist") & ~BANNED_USERS)
 @languageCB
-async def add_playlists(client, CallbackQuery, _):
+async def add_playlists_branded(client, CallbackQuery, _):
+    emo = choice(HEART_EMOJIS)
     callback_data = CallbackQuery.data.strip()
     videoid = callback_data.split(None, 1)[1]
     user_id = CallbackQuery.from_user.id
@@ -672,9 +629,7 @@ async def add_playlists(client, CallbackQuery, _):
     _check = await get_playlist(user_id, videoid)
     if _check:
         try:
-            from VIPMUSIC import YouTube
-
-            return await CallbackQuery.answer(_["playlist_8"], show_alert=True)
+            return await CallbackQuery.answer("مـوجـودة بـالـفـعـل فـي قـائـمـتـك!", show_alert=True)
         except:
             return
     _count = await get_playlist_names(user_id)
@@ -682,7 +637,7 @@ async def add_playlists(client, CallbackQuery, _):
     if count == SERVER_PLAYLIST_LIMIT:
         try:
             return await CallbackQuery.answer(
-                _["playlist_9"].format(SERVER_PLAYLIST_LIMIT),
+                "قـائـمـتـك مـمـتـلـئـة بـالـكـامـل!",
                 show_alert=True,
             )
         except:
@@ -704,50 +659,44 @@ async def add_playlists(client, CallbackQuery, _):
     try:
         title = (title[:30]).title()
         return await CallbackQuery.answer(
-            _["playlist_10"].format(title), show_alert=True
+            f"تـمـت الإضـافـة: {title} {emo}", show_alert=True
         )
     except:
         return
 
 
-# New command
-DELETE_ALL_PLAYLIST_COMMAND = "delallplaylist"
-
-
-@app.on_message(filters.command(DELETE_ALL_PLAYLIST_COMMAND) & ~BANNED_USERS)
+@app.on_message(filters.command(["delallplaylist", "حذف القائمة كلها", "حذف الكل", "فرمتة القائمة"]) & ~BANNED_USERS)
 @language
 async def delete_all_playlists(client, message, _):
-    pass
-
+    emo = choice(HEART_EMOJIS)
     user_id = message.from_user.id
     _playlist = await get_playlist_names(user_id)
     if _playlist:
         try:
             upl = warning_markup(_)
-            await message.reply_text(_["playlist_14"], reply_markup=upl)
+            await message.reply_text(f"**هـل أنـت مـتـأكـد أنـك تـريـد حـذف الـقـائـمـة بـالـكـامـل؟ {emo}**", reply_markup=upl)
         except:
             pass
     else:
-        await message.reply_text(_["playlist_3"])
+        await message.reply_text("**الـقـائـمـة فـارغـة بـالـفـعـل.**")
 
 
 @app.on_callback_query(filters.regex("del_playlist") & ~BANNED_USERS)
 @languageCB
-async def del_plist(client, CallbackQuery, _):
-    pass
-
+async def del_plist_cb(client, CallbackQuery, _):
+    emo = choice(HEART_EMOJIS)
     callback_data = CallbackQuery.data.strip()
     videoid = callback_data.split(None, 1)[1]
     user_id = CallbackQuery.from_user.id
     deleted = await delete_playlist(CallbackQuery.from_user.id, videoid)
     if deleted:
         try:
-            await CallbackQuery.answer(_["playlist_11"], show_alert=True)
+            await CallbackQuery.answer(f"تـم الـحـذف {emo}", show_alert=True)
         except:
             pass
     else:
         try:
-            return await CallbackQuery.answer(_["playlist_12"], show_alert=True)
+            return await CallbackQuery.answer("حـدث خـطـأ.", show_alert=True)
         except:
             return
     keyboard, count = await get_keyboard(_, user_id)
@@ -757,15 +706,11 @@ async def del_plist(client, CallbackQuery, _):
 @app.on_callback_query(filters.regex("delete_whole_playlist") & ~BANNED_USERS)
 @languageCB
 async def del_whole_playlist(client, CallbackQuery, _):
-    pass
-
+    emo = choice(HEART_EMOJIS)
     _playlist = await get_playlist_names(CallbackQuery.from_user.id)
     for x in _playlist:
-        await CallbackQuery.answer(
-            "➻ ᴏᴋ sɪʀ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ.\n\n➥ ᴅᴇʟᴇᴛɪɴɢ ʏᴏᴜʀ ᴘʟᴀʏʟɪsᴛ...", show_alert=True
-        )
         await delete_playlist(CallbackQuery.from_user.id, x)
-    return await CallbackQuery.edit_message_text(_["playlist_13"])
+    return await CallbackQuery.edit_message_text(f"**تـم حـذف الـقـائـمـة بـالـكـامـل بـنـجـاح {emo}**")
 
 
 @app.on_callback_query(filters.regex("get_playlist_playmode") & ~BANNED_USERS)
@@ -784,21 +729,18 @@ async def get_playlist_playmode_(client, CallbackQuery, _):
 @app.on_callback_query(filters.regex("delete_warning") & ~BANNED_USERS)
 @languageCB
 async def delete_warning_message(client, CallbackQuery, _):
-    pass
-
+    emo = choice(HEART_EMOJIS)
     try:
         await CallbackQuery.answer()
     except:
         pass
     upl = warning_markup(_)
-    return await CallbackQuery.edit_message_text(_["playlist_14"], reply_markup=upl)
+    return await CallbackQuery.edit_message_text(f"**هـل أنـت مـتـأكـد مـن الـحـذف؟ لا يـمـكـن الـتـراجـع! {emo}**", reply_markup=upl)
 
 
 @app.on_callback_query(filters.regex("home_play") & ~BANNED_USERS)
 @languageCB
 async def home_play_(client, CallbackQuery, _):
-    pass
-
     try:
         await CallbackQuery.answer()
     except:
@@ -812,21 +754,19 @@ async def home_play_(client, CallbackQuery, _):
 @app.on_callback_query(filters.regex("del_back_playlist") & ~BANNED_USERS)
 @languageCB
 async def del_back_playlist(client, CallbackQuery, _):
-    pass
-
     user_id = CallbackQuery.from_user.id
     _playlist = await get_playlist_names(user_id)
     if _playlist:
         try:
-            await CallbackQuery.answer(_["playlist_2"], show_alert=True)
+            await CallbackQuery.answer("الـرجـوع...", show_alert=True)
         except:
             pass
     else:
         try:
-            return await CallbackQuery.answer(_["playlist_3"], show_alert=True)
+            return await CallbackQuery.answer("الـقـائـمـة فـارغـة", show_alert=True)
         except:
             return
     keyboard, count = await get_keyboard(_, user_id)
     return await CallbackQuery.edit_message_text(
-        _["playlist_7"].format(count), reply_markup=keyboard
+        f"**لـديـك {count} أغـنـيـة فـي الـقـائـمـة:**", reply_markup=keyboard
     )
