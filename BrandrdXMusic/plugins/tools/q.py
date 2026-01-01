@@ -7,7 +7,7 @@ from BrandrdXMusic import app
 
 # --------------------------------------------------------------------------------- #
 
-# إعدادات العميل
+# إعدادات العميل (تم تحسين الهيدر ليعمل بسلاسة)
 fetch = AsyncClient(
     http2=True,
     verify=False,
@@ -81,7 +81,7 @@ async def get_text_or_caption(ctx: Message):
     return ctx.text or ctx.caption or ""
 
 # --------------------------------------------------------------------------------- #
-# الدالة الرئيسية (تم تحديث الرابط هنا)
+# الدالة الرئيسية لصنع الاقتباس
 
 async def pyrogram_to_quotly(messages, is_reply):
     if not isinstance(messages, list):
@@ -121,7 +121,7 @@ async def pyrogram_to_quotly(messages, is_reply):
             
         payload["messages"].append(msg_data)
 
-    # هنا تم وضع الرابط الجديد الخاص بك
+    # هنا تم وضع رابط الـ API الخاص بك من Vercel
     response = await fetch.post("https://quote-api-amber-beta.vercel.app/generate", json=payload)
     
     if not response.is_error:
@@ -137,9 +137,11 @@ def isArgInt(txt) -> list:
 # --------------------------------------------------------------------------------- #
 # معالج الأوامر
 
-@app.on_message(filters.command(["اقتباس", "صوري", "q", "r"], prefixes=["/", "!", "."]) & filters.reply)
+# تم إضافة "" في البادئات ليعمل الأمر بدون سلاش
+@app.on_message(filters.command(["اقتباس", "صوري", "q", "r"], prefixes=["", "/", "!", "."]) & filters.reply)
 async def msg_quotly_cmd(client, message: Message):
     
+    # محاولة حذف رسالة العضو لتنظيف المحادثة
     try:
         await message.delete()
     except:
@@ -148,9 +150,11 @@ async def msg_quotly_cmd(client, message: Message):
     wait_msg = await message.reply_text("**جـاري صـنـع الـمـلـصـق...** 🤍")
     
     is_reply = False
+    # التحقق مما إذا كان الأمر "صوري" أو "r"
     if message.command[0] in ["صوري", "r"]:
         is_reply = True
 
+    # التعامل مع الاقتباس المتعدد
     if len(message.command) > 1:
         check_arg = isArgInt(message.command[1])
         if check_arg[0]:
@@ -186,6 +190,7 @@ async def msg_quotly_cmd(client, message: Message):
                 await wait_msg.delete()
                 return await message.reply_text("**حـدث خـطـأ أثـنـاء الـتـصـمـيـم**")
 
+    # التعامل مع الاقتباس الفردي
     try:
         messages = [message.reply_to_message]
         make_quotly = await pyrogram_to_quotly(messages, is_reply=is_reply)
