@@ -1,20 +1,20 @@
 from typing import Union
-
-from pyrogram import filters, types
+from pyrogram import filters, types, enums
 from pyrogram.types import InlineKeyboardMarkup, Message, InlineKeyboardButton
-
 from BrandrdXMusic import app
 from BrandrdXMusic.utils import help_pannel
 from BrandrdXMusic.utils.database import get_lang
 from BrandrdXMusic.utils.decorators.language import LanguageStart, languageCB
 from BrandrdXMusic.utils.inline.help import help_back_markup, private_help_panel
-from config import BANNED_USERS, START_IMG_URL, SUPPORT_CHAT
+from config import BANNED_USERS, SUPPORT_CHAT
 from strings import get_string, helpers
 from BrandrdXMusic.utils.stuffs.buttons import BUTTONS
 from BrandrdXMusic.utils.stuffs.helper import Helper
 
+# رابط الصورة الجديد
+HELP_IMG = "https://files.catbox.moe/wqipfn.jpg"
 
-@app.on_message(filters.command(["help"]) & filters.private & ~BANNED_USERS)
+@app.on_message(filters.command(["help", "الاوامر", "اوامر", "مساعدة"], prefixes=["/", "!", ".", "", "@"]) & filters.private & ~BANNED_USERS)
 @app.on_callback_query(filters.regex("settings_back_helper") & ~BANNED_USERS)
 async def helper_private(
     client: app, update: Union[types.Message, types.CallbackQuery]
@@ -41,17 +41,19 @@ async def helper_private(
         _ = get_string(language)
         keyboard = help_pannel(_)
         
-        await update.reply_video(
-            video="https://graph.org/file/84d30d4fd04570c0e0256.mp4",
+        # تم تغيير الفيديو إلى الصورة المطلوبة
+        await update.reply_photo(
+            photo=HELP_IMG,
             caption=_["help_1"].format(SUPPORT_CHAT), reply_markup=keyboard)
 
 
-@app.on_message(filters.command(["help"]) & filters.group & ~BANNED_USERS)
+@app.on_message(filters.command(["help", "الاوامر", "اوامر", "مساعدة"], prefixes=["/", "!", ".", "", "@"]) & filters.group & ~BANNED_USERS)
 @LanguageStart
 async def help_com_group(client, message: Message, _):
     keyboard = private_help_panel(_)
-    await message.reply_video(
-        video="https://te.legra.ph/file/51293513e6af319726fe7.mp4",
+    # تم تغيير الفيديو إلى الصورة المطلوبة
+    await message.reply_photo(
+        photo=HELP_IMG,
         caption=_["help_2"], reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -102,6 +104,9 @@ async def helper_cb(client, CallbackQuery):
 async def on_back_button(client, CallbackQuery):
     callback_data = CallbackQuery.data.strip()
     cb = callback_data.split(None, 1)[1]
+    # جلب اللغة للتأكد من عمل الترجمة عند الرجوع
+    language = await get_lang(CallbackQuery.message.chat.id)
+    _ = get_string(language)
     keyboard = help_pannel(_, True)
     if cb == "settings_back_helper":
         await CallbackQuery.edit_message_text(
@@ -112,8 +117,8 @@ async def on_back_button(client, CallbackQuery):
 async def mb_plugin_button(client, CallbackQuery):
     callback_data = CallbackQuery.data.strip()
     cb = callback_data.split(None, 1)[1]
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("ʙᴀᴄᴋ", callback_data=f"mbot_cb")]])
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("رجـوع 🥀", callback_data=f"mbot_cb")]])
     if cb == "Okieeeeee":
-        await CallbackQuery.edit_message_text(f"`something errors`",reply_markup=keyboard,parse_mode=enums.ParseMode.MARKDOWN)
+        await CallbackQuery.edit_message_text(f"`حـدث خـطـأ مـا 🥀`",reply_markup=keyboard,parse_mode=enums.ParseMode.MARKDOWN)
     else:
         await CallbackQuery.edit_message_text(getattr(Helper, cb), reply_markup=keyboard)
