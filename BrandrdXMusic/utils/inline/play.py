@@ -7,7 +7,7 @@ from config import OWNER_ID
 CHANNEL_LINK = "https://t.me/SourceBoda"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  دالة شريط القلب (محسنة رياضياً)
+#  دالة شريط القلب
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def create_heart_bar(percentage):
     steps = 10 
@@ -48,7 +48,7 @@ def track_markup(_, videoid, user_id, channel, fplay):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Stream Timer Markup (المشغل الرئيسي مع الوقت)
+#  Stream Timer Markup (1)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def stream_markup_timer(_, vidid, chat_id, played, dur):
     played_sec = time_to_seconds(played)
@@ -79,7 +79,38 @@ def stream_markup_timer(_, vidid, chat_id, played, dur):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Stream Markup (الأساسي)
+#  Stream Timer Markup (2) - (الدالة التي كانت ناقصة)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def stream_markup_timer2(_, vidid, chat_id, played, dur):
+    played_sec = time_to_seconds(played)
+    duration_sec = time_to_seconds(dur) or 1
+    
+    percentage = (played_sec / duration_sec) * 100
+    bar = create_heart_bar(percentage)
+
+    return [
+        [
+            InlineKeyboardButton(
+                text=f"{played} {bar} {dur}", callback_data="GetTimer"
+            )
+        ],
+        [
+            InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}"),
+            InlineKeyboardButton(text="II", callback_data=f"ADMIN Pause|{chat_id}"),
+            InlineKeyboardButton(text="↻", callback_data=f"ADMIN Replay|{chat_id}"),
+            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+        ],
+        [
+            InlineKeyboardButton(text="المطور", url=f"tg://user?id={OWNER_ID}"),
+            InlineKeyboardButton(text="قناة السورس", url=CHANNEL_LINK),
+        ],
+        [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
+    ]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Stream Markup
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def stream_markup(_, videoid, chat_id):
     return [
@@ -99,7 +130,7 @@ def stream_markup(_, videoid, chat_id):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Stream Markup 2 (الذي كان ناقصاً)
+#  Stream Markup 2
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def stream_markup2(_, videoid, chat_id):
     return [
@@ -119,7 +150,7 @@ def stream_markup2(_, videoid, chat_id):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Telegram Markup (لتشغيل الملفات الصوتية)
+#  Telegram Markup
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def telegram_markup(_, chat_id):
     return [
