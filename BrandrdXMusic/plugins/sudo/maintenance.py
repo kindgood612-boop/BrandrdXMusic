@@ -2,7 +2,8 @@ import os
 from pyrogram import filters
 from pyrogram.types import Message
 from BrandrdXMusic import app
-from config import OWNER_ID
+# هنا التعديل: استدعينا LOGGER_ID بدلاً من LOG_GROUP_ID
+from config import OWNER_ID, LOGGER_ID
 from BrandrdXMusic.utils.database import (
     is_maintenance,
     maintenance_off,
@@ -12,21 +13,18 @@ from BrandrdXMusic.utils.database import (
     add_off,
 )
 
-# --- دالة فحص الصيانة (تعالج مشكلة الـ TypeError تلقائياً) ---
+# --- دالة فحص الصيانة ---
 async def check_maint():
-    """تتأكد من حالة الصيانة سواء كانت الدالة تطلب رقم 1 أم لا"""
     try:
-        # المحاولة 1: استدعاء فارغ
         return await is_maintenance()
     except TypeError:
-        # المحاولة 2: استدعاء مع رقم 1 (لأن السورس لديك يستخدم IDs)
         try:
             return await is_maintenance(1)
         except Exception:
             return False
     except Exception:
         return False
-# -----------------------------------------------------------
+# -------------------------
 
 # 1. الحارس (Maintenance Check)
 @app.on_message(filters.all & ~filters.user(OWNER_ID), group=-1)
@@ -44,7 +42,7 @@ async def maintenance_check(client, message: Message):
         pass
 
 
-# 2. أوامر الصيانة (للمطور فقط)
+# 2. أوامر الصيانة
 @app.on_message(filters.command(["maintenance", "الصيانة"], prefixes=["/", "!", ".", ""]) & filters.user(OWNER_ID))
 async def maintenance(client, message: Message):
     if len(message.command) != 2:
@@ -55,8 +53,6 @@ async def maintenance(client, message: Message):
         )
         
     state = message.text.split(None, 1)[1].strip().lower()
-    
-    # نستخدم دالة الفحص الذكية
     is_active = await check_maint()
 
     if state in ["enable", "تفعيل", "on"]:
@@ -77,7 +73,7 @@ async def maintenance(client, message: Message):
         await message.reply_text("**أمـر غـيـر صـحـيـح.**")
 
 
-# 3. أوامر السجل (Logger)
+# 3. أوامر السجل
 @app.on_message(filters.command(["logger", "السجل"], prefixes=["/", "!", ".", ""]) & filters.user(OWNER_ID))
 async def logger_toggle(client, message: Message):
     if len(message.command) != 2:
