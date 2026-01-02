@@ -3,6 +3,8 @@ import importlib
 from sys import argv
 from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
+from flask import Flask
+from threading import Thread
 
 import config
 from BrandrdXMusic import LOGGER, app, userbot
@@ -12,8 +14,28 @@ from BrandrdXMusic.plugins import ALL_MODULES
 from BrandrdXMusic.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
 
+# --- بداية كود خدعة الإبقاء حياً ---
+web_app = Flask('')
+
+@web_app.route('/')
+def home():
+    return "Bot is Running 24/7"
+
+def run_web_server():
+    # المنفذ 8000 هو الافتراضي والمتوافق مع Koyeb
+    web_app.run(host='0.0.0.0', port=8000)
+
+def keep_alive():
+    t = Thread(target=run_web_server)
+    t.daemon = True
+    t.start()
+# --- نهاية كود الخدعة ---
 
 async def init():
+    # تشغيل سيرفر الويب قبل بدء تشغيل مكونات البوت
+    keep_alive()
+    LOGGER("BrandrdXMusic").info("Web Server started on port 8000. Keep Alive is Active!")
+
     if (
         not config.STRING1
         and not config.STRING2
@@ -50,7 +72,7 @@ async def init():
         pass
     await Hotty.decorators()
     LOGGER("BrandrdXMusic").info(
-        "ᴅʀᴏᴘ ʏᴏᴜʀ ɢɪʀʟꜰʀɪᴇɴᴅ'ꜱ ɴᴜᴍʙᴇʀ ᴀᴛ @BRANDED_PAID_CC ᴊᴏɪɴ @BRANDRD_BOT , @BRANDED_WORLD ꜰᴏʀ ᴀɴʏ ɪꜱꜱᴜᴇꜱ"
+        "ᴅʀᴏᴘ ʏᴏᴜʀ ɢɪʀʟꜰʀɪᴇɴᴅ'ꜱ ɴᴜᴍʙᴇʀ ᴀᴛ @BRANDED_PAID_CC ᴊᴏɪɴ @music0587 , @music0587 ꜰᴏʀ ᴀɴʏ ɪꜱꜱᴜᴇꜱ"
     )
     await idle()
     await app.stop()
