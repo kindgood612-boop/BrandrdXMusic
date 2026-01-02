@@ -1,59 +1,32 @@
 import os
 from random import randint
 from typing import Union
-import random
-import string
 import asyncio
-from pyrogram import client, filters
-from pyrogram.types import InlineKeyboardMarkup, InputMediaPhoto, Message
-from pytgcalls.exceptions import NoActiveGroupCall
-from BrandrdXMusic.utils.database import get_assistant
-import config
-from BrandrdXMusic import Apple, Resso, SoundCloud, Spotify, Telegram, YouTube, app
+from pyrogram import filters
+from pyrogram.types import InlineKeyboardMarkup
+
+# استدعاءات السورس الأساسية
+from BrandrdXMusic import app, YouTube
 from BrandrdXMusic.core.call import Hotty
-from BrandrdXMusic.misc import SUDOERS
-from BrandrdXMusic.utils import seconds_to_min, time_to_seconds
-from BrandrdXMusic.utils.channelplay import get_channeplayCB
-from BrandrdXMusic.utils.decorators.language import languageCB
-from BrandrdXMusic.utils.decorators.play import PlayWrapper
-from BrandrdXMusic.utils.formatters import formats
-from BrandrdXMusic.utils.database import (
-    add_served_chat,
-    add_served_user,
-    blacklisted_chats,
-    get_lang,
-    is_banned_user,
-    is_on_off,
-)
-from BrandrdXMusic.utils.logger import play_logs
-from config import BANNED_USERS, lyrical
-from time import time
-from BrandrdXMusic.utils.extraction import extract_user
-from BrandrdXMusic import Carbon
 from BrandrdXMusic.misc import db
-from BrandrdXMusic.utils.database import add_active_video_chat, is_active_chat
+from BrandrdXMusic.utils import seconds_to_min, time_to_seconds
+from BrandrdXMusic.utils.database import (
+    add_active_video_chat,
+    is_active_chat,
+)
 from BrandrdXMusic.utils.exceptions import AssistantErr
 from BrandrdXMusic.utils.inline import (
     aq_markup,
     close_markup,
     stream_markup,
 )
-from BrandrdXMusic.utils.pastebin import HottyBin
+# تصحيح الخطأ الشهير هنا (Rename Class)
+from BrandrdXMusic.utils.pastebin import HottyBin as brandedBin
 from BrandrdXMusic.utils.stream.queue import put_queue, put_queue_index
-from youtubesearchpython.__future__ import VideosSearch
-
-# -----------------------------------------------------------
-# هذا هو السطر السحري الذي سيستدعي تصميمك الجديد
 from BrandrdXMusic.utils.thumbnails import get_thumb
-# -----------------------------------------------------------
+import config
 
-# Define a dictionary to track the last message timestamp for each user
-user_last_message_time = {}
-user_command_count = {}
-# Define the threshold for command spamming (e.g., 20 commands within 60 seconds)
-SPAM_THRESHOLD = 2
-SPAM_WINDOW_SECONDS = 5
-
+# --- الكود الأساسي ---
 
 async def stream(
     _,
@@ -70,8 +43,12 @@ async def stream(
 ):
     if not result:
         return
+
+    # إيقاف التشغيل الإجباري لو مطلوب
     if forceplay:
         await Hotty.force_stop_stream(chat_id)
+
+    # 1. تشغيل قائمة تشغيل (Playlist)
     if streamtype == "playlist":
         msg = f"{_['play_19']}\n\n"
         count = 0
@@ -88,10 +65,12 @@ async def stream(
                 ) = await YouTube.details(search, False if spotify else True)
             except:
                 continue
+
             if str(duration_min) == "None":
                 continue
             if duration_sec > config.DURATION_LIMIT:
                 continue
+
             if await is_active_chat(chat_id):
                 await put_queue(
                     chat_id,
@@ -113,11 +92,14 @@ async def stream(
                     db[chat_id] = []
                 status = True if video else None
                 try:
+                    # هنا بيتم التحميل الفعلي
                     file_path, direct = await YouTube.download(
                         vidid, mystic, video=status, videoid=True
                     )
-                except:
-                    await mystic.edit_text(_["play_3"])
+                except Exception as e:
+                    # لو فشل التحميل، نعرض رسالة خطأ
+                    return await mystic.edit_text(_["play_3"])
+
                 await Hotty.join_call(
                     chat_id,
                     original_chat_id,
@@ -137,7 +119,7 @@ async def stream(
                     "video" if video else "audio",
                     forceplay=forceplay,
                 )
-                # هنا سيتم استخدام دالة get_thumb الجديدة تلقائياً
+                
                 img = await get_thumb(vidid)
                 button = stream_markup(_, vidid, chat_id)
                 run = await app.send_photo(
@@ -151,19 +133,27 @@ async def stream(
                     ),
                     reply_markup=InlineKeyboardMarkup(button),
                 )
-
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
+
         if count == 0:
             return
         else:
+            # رفع القائمة على PasteBin
             link = await brandedBin(msg)
             lines = msg.count("\n")
             if lines >= 17:
                 car = os.linesep.join(msg.split(os.linesep)[:17])
             else:
                 car = msg
-            carbon = await Carbon.generate(car, randint(100, 10000000))
+            
+            # لاحظ: تأكد أن كلاس Carbon يعمل، وإلا استبدله بصورة ثابتة
+            try:
+                from BrandrdXMusic import Carbon
+                carbon = await Carbon.generate(car, randint(100, 10000000))
+            except:
+                carbon = config.STREAM_IMG_URL  # صورة احتياطية
+
             upl = close_markup(_)
             return await app.send_photo(
                 original_chat_id,
@@ -171,6 +161,8 @@ async def stream(
                 caption=_["play_21"].format(position, link),
                 reply_markup=upl,
             )
+
+    # 2. تشغيل يوتيوب عادي (YouTube)
     elif streamtype == "youtube":
         link = result["link"]
         vidid = result["vidid"]
@@ -178,12 +170,14 @@ async def stream(
         duration_min = result["duration_min"]
         thumbnail = result["thumb"]
         status = True if video else None
+
         try:
             file_path, direct = await YouTube.download(
                 vidid, mystic, videoid=True, video=status
             )
         except:
-            await mystic.edit_text(_["play_3"])
+            return await mystic.edit_text(_["play_3"])
+
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -210,6 +204,7 @@ async def stream(
         else:
             if not forceplay:
                 db[chat_id] = []
+            
             await Hotty.join_call(
                 chat_id,
                 original_chat_id,
@@ -242,13 +237,15 @@ async def stream(
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
             )
-
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
+
+    # 3. ساوند كلاود (SoundCloud)
     elif streamtype == "soundcloud":
         file_path = result["filepath"]
         title = result["title"]
         duration_min = result["duration_min"]
+        
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -284,8 +281,7 @@ async def stream(
                 "audio",
                 forceplay=forceplay,
             )
-            # لاحظ: stream_markup2 قد تحتاج لاستدعاء إذا لم تكن معرفة، لكن تركتها كما هي في كودك الأصلي
-            button = stream_markup(_, chat_id) 
+            button = stream_markup(_, chat_id)
             run = await app.send_photo(
                 original_chat_id,
                 photo=config.SOUNCLOUD_IMG_URL,
@@ -296,12 +292,15 @@ async def stream(
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+
+    # 4. ملفات تليجرام (Telegram Files)
     elif streamtype == "telegram":
         file_path = result["path"]
         link = result["link"]
         title = (result["title"]).title()
         duration_min = result["dur"]
         status = True if video else None
+        
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -348,6 +347,8 @@ async def stream(
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+
+    # 5. بث مباشر (Live)
     elif streamtype == "live":
         link = result["link"]
         vidid = result["vidid"]
@@ -355,6 +356,7 @@ async def stream(
         thumbnail = result["thumb"]
         duration_min = "Live Track"
         status = True if video else None
+        
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -377,9 +379,12 @@ async def stream(
         else:
             if not forceplay:
                 db[chat_id] = []
+            
+            # استخراج رابط البث
             n, file_path = await YouTube.video(link)
             if n == 0:
                 raise AssistantErr(_["str_3"])
+            
             await Hotty.join_call(
                 chat_id,
                 original_chat_id,
@@ -414,10 +419,13 @@ async def stream(
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+
+    # 6. روابط مباشرة (M3U8 / Index)
     elif streamtype == "index":
         link = result
         title = "ɪɴᴅᴇx ᴏʀ ᴍ3ᴜ8 ʟɪɴᴋ"
         duration_min = "00:00"
+        
         if await is_active_chat(chat_id):
             await put_queue_index(
                 chat_id,
@@ -465,6 +473,3 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
             await mystic.delete()
-
-# ⚠️ لقد قمت بحذف دوال get_thumb المكررة من هنا
-# حتى لا تتعارض مع الملف الخارجي الذي يحتوي على التصميم الجديد
