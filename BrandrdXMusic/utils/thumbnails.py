@@ -1,7 +1,13 @@
 import os
-from PIL import Image, ImageDraw, ImageFilter, ImageOps, ImageFont
+import re
+import aiofiles
+import aiohttp
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+from youtubesearchpython import VideosSearch
+from config import YOUTUBE_IMG_URL
 
-async def gen_thumb(thumbnail, title, userid, theme, duration, views):
+# دالة التصميم الخاصة بك (تم تعديلها قليلاً لتقبل المسارات وتعمل مع get_thumb)
+async def gen_thumb(thumbnail, title, userid, theme, duration, views, videoid):
     try:
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # 1. إعداد الخلفية والصورة الأساسية
@@ -9,42 +15,34 @@ async def gen_thumb(thumbnail, title, userid, theme, duration, views):
         if os.path.isfile(thumbnail):
             source = Image.open(thumbnail).convert("RGB")
         else:
-            # لون احتياطي في حال عدم وجود صورة
             source = Image.new('RGB', (1280, 720), (30, 30, 30))
 
-        # استخدام fit لضمان عدم مط الصورة (الحفاظ على الأبعاد)
         bg = ImageOps.fit(source, (1280, 720), centering=(0.5, 0.5))
-        bg = bg.filter(ImageFilter.GaussianBlur(60)) # ضبابية قوية
+        bg = bg.filter(ImageFilter.GaussianBlur(60))
         
-        # طبقة تعتيم (Dark Overlay)
         overlay = Image.new('RGBA', (1280, 720), (0, 0, 0, 100))
         bg.paste(overlay, (0, 0), overlay)
 
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # 2. تصميم الأسطوانة (Vinyl) - حجم مصغر
+        # 2. تصميم الأسطوانة (Vinyl)
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        sz = 440 # حجم صغير ومناسب
-        
-        # قص الصورة بشكل دائري
+        sz = 440
         mask = Image.new('L', (sz, sz), 0)
         ImageDraw.Draw(mask).ellipse((0, 0, sz, sz), fill=255)
         
         vinyl = ImageOps.fit(source, (sz, sz), centering=(0.5, 0.5)).convert("RGBA")
         vinyl.putalpha(mask)
         
-        # رسم خطوط الأسطوانة (Grooves)
         d_v = ImageDraw.Draw(vinyl)
         for i in range(0, sz//2, 12):
             d_v.ellipse((i, i, sz-i, sz-i), outline=(0,0,0,35), width=2)
             
-        # الملصق الداخلي (Label)
         lbl_sz = 150
         lbl_img = ImageOps.fit(source, (lbl_sz, lbl_sz), centering=(0.5, 0.5))
         lbl_mask = Image.new('L', (lbl_sz, lbl_sz), 0)
         ImageDraw.Draw(lbl_mask).ellipse((0, 0, lbl_sz, lbl_sz), fill=255)
         lbl_img.putalpha(lbl_mask)
         
-        # إطار حول الملصق
         lbl_border = Image.new('RGBA', (lbl_sz+10, lbl_sz+10), (20,20,20,255))
         bor_mask = Image.new('L', (lbl_sz+10, lbl_sz+10), 0)
         ImageDraw.Draw(bor_mask).ellipse((0,0,lbl_sz+10,lbl_sz+10), fill=255)
@@ -52,7 +50,6 @@ async def gen_thumb(thumbnail, title, userid, theme, duration, views):
         lbl_border.paste(lbl_img, (5,5), lbl_img)
         vinyl.paste(lbl_border, ((sz-lbl_sz-10)//2, (sz-lbl_sz-10)//2), lbl_border)
         
-        # الثقب الأسود (Hole)
         h_sz = 25
         h_mask = Image.new('L', (h_sz, h_sz), 0)
         ImageDraw.Draw(h_mask).ellipse((0, 0, h_sz, h_sz), fill=255)
@@ -60,12 +57,10 @@ async def gen_thumb(thumbnail, title, userid, theme, duration, views):
         hole.putalpha(h_mask)
         vinyl.paste(hole, ((sz-h_sz)//2, (sz-h_sz)//2), hole)
 
-        # الظل الخلفي للأسطوانة
         shadow = Image.new('RGBA', (sz+60, sz+60), (0,0,0,0))
         ImageDraw.Draw(shadow).ellipse((30, 30, sz+30, sz+30), fill=(0,0,0,160))
         shadow = shadow.filter(ImageFilter.GaussianBlur(40))
         
-        # تركيب الأسطوانة على اليسار
         bg.paste(shadow, (-60, (720-sz)//2 + 20), shadow)
         bg.paste(vinyl, (-80, (720-sz)//2), vinyl)
 
@@ -75,7 +70,6 @@ async def gen_thumb(thumbnail, title, userid, theme, duration, views):
         cx, cy, cw, ch = 440, 160, 780, 420
         glass = Image.new('RGBA', (cw, ch), (255, 255, 255, 0))
         d_glass = ImageDraw.Draw(glass)
-        # حواف دائرية جداً (Radius = 60)
         d_glass.rounded_rectangle((0,0,cw,ch), radius=60, fill=(255,255,255,15), outline=(255,255,255,50), width=2)
         bg.paste(glass, (cx, cy), glass)
 
@@ -84,45 +78,98 @@ async def gen_thumb(thumbnail, title, userid, theme, duration, views):
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         d = ImageDraw.Draw(bg)
         try:
-            # حاول تحميل الخطوط، إذا لم توجد استخدم الافتراضي
             f_title = ImageFont.truetype("BrandrdXMusic/assets/font.ttf", 55)
             f_sub = ImageFont.truetype("BrandrdXMusic/assets/font.ttf", 35)
             f_small = ImageFont.truetype("BrandrdXMusic/assets/font2.ttf", 28)
         except:
             f_title = f_sub = f_small = ImageFont.load_default()
 
-        # قص العنوان إذا كان طويلاً جداً
         if len(title) > 30: title = title[:30] + "..."
         
         tx, ty = cx + 60, cy + 50
         
-        # العنوان
         d.text((tx, ty), title, font=f_title, fill="white")
-        
-        # اسم المستخدم
-        d.text((tx, ty+75), f"By: {userid}", font=f_sub, fill="#dddddd")
-        
-        # عدد المشاهدات
+        d.text((tx, ty+75), f"Channel: {userid}", font=f_sub, fill="#dddddd")
         d.text((tx, ty+125), f"Views: {views}", font=f_small, fill="#aaaaaa")
 
-        # شريط التقدم (Progress Bar)
         by = cy + 280
-        # الخط الخلفي الشفاف
         d.line([(tx, by), (cx+cw-60, by)], fill=(255,255,255,50), width=8)
-        # الخط الملون (يأخذ لون الثيم)
         d.line([(tx, by), (tx+250, by)], fill=theme, width=8)
-        # النقطة البيضاء
         d.ellipse((tx+240, by-10, tx+260, by+10), fill='white')
         
-        # توقيت البداية والنهاية
         d.text((tx, by+25), "00:00", font=f_small, fill="white")
         d.text((cx+cw-150, by+25), duration, font=f_small, fill="white")
 
-        # الحفظ والإرجاع
-        output = f"thumb_{userid}.png"
+        # الحفظ باسم الفيديو آيدي لسهولة الوصول
+        output = f"cache/{videoid}.png"
         bg.save(output)
         return output
         
     except Exception as e:
         print(f"Error in gen_thumb: {e}")
         return thumbnail
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# الدالة الرئيسية التي يطلبها البوت (get_thumb)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async def get_thumb(videoid):
+    # إذا كانت الصورة موجودة مسبقاً في الكاش، قم بإرجاعها فوراً
+    if os.path.isfile(f"cache/{videoid}.png"):
+        return f"cache/{videoid}.png"
+
+    # جلب معلومات الفيديو
+    url = f"https://www.youtube.com/watch?v={videoid}"
+    try:
+        results = VideosSearch(url, limit=1)
+        for result in (await results.next())["result"]:
+            try:
+                title = result["title"]
+                title = re.sub("\W+", " ", title)
+                title = title.title()
+            except:
+                title = "Unsupported Title"
+            try:
+                duration = result["duration"]
+            except:
+                duration = "Unknown Mins"
+            thumbnail = result["thumbnails"][0]["url"].split("?")[0]
+            try:
+                views = result["viewCount"]["short"]
+            except:
+                views = "Unknown Views"
+            try:
+                channel = result["channel"]["name"]
+            except:
+                channel = "Unknown Channel"
+
+        # تحميل الصورة الخام مؤقتاً
+        async with aiohttp.ClientSession() as session:
+            async with session.get(thumbnail) as resp:
+                if resp.status == 200:
+                    f = await aiofiles.open(f"cache/temp{videoid}.png", mode="wb")
+                    await f.write(await resp.read())
+                    await f.close()
+
+        # استدعاء دالة التصميم الخاصة بك
+        # نمرر اللون الأحمر كافتراضي للثيم
+        final_image = await gen_thumb(
+            f"cache/temp{videoid}.png", 
+            title, 
+            channel, 
+            "#ff0000", 
+            duration, 
+            views,
+            videoid
+        )
+
+        # حذف الصورة المؤقتة لتوفير المساحة
+        try:
+            os.remove(f"cache/temp{videoid}.png")
+        except:
+            pass
+            
+        return final_image
+
+    except Exception as e:
+        print(e)
+        return YOUTUBE_IMG_URL
