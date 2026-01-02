@@ -8,12 +8,26 @@ from BrandrdXMusic.utils.decorators.admins import AdminActual
 from config import BANNED_USERS
 
 
-@app.on_message(filters.command(["channelplay", "ربط القناة", "تشغيل القناة", "ربط قناة"]) & filters.group & ~BANNED_USERS)
+@app.on_message(
+    filters.command(
+        ["channelplay", "ربط القناة", "تشغيل القناة", "ربط قناة"],
+        prefixes=["/", "!", ".", ""]
+    )
+    & filters.group
+    & ~BANNED_USERS
+)
 @AdminActual
 async def playmode_(client, message: Message, _):
+    # التحقق مما إذا كان المستخدم مشرف مخفي
+    if message.sender_chat and message.sender_chat.id == message.chat.id:
+        return await message.reply_text(
+            "**عــذراً، لا يــمــكــنــك ربــط الــقــنــاة وأنــت بــوضــع الــتــخــفــي ( مــشــرف مــخــفــي ).**\n"
+            "يــرجــى الــدخــول بــحــســابــك الــشــخــصــي لــإثــبــات مــلــكــيــة الــقــنــاة."
+        )
+
     if len(message.command) < 2:
         return await message.reply_text(
-            "<b>طريقة الاستخدام:</b>\n/channelplay [معرف القناة/مرتبطة/تعطيل]\n\n<b>مثال:</b>\n/channelplay @ChannelName"
+            "<b>طــريــقــة الاســتــخــدام :</b>\nربــط قــنــاة [ مــعــرف الــقــنــاة / مــرتــبــطــة / تــعــطــيــل ]\n\n<b>مــثــال :</b>\nربــط قــنــاة @ChannelName"
         )
     
     query = message.text.split(None, 2)[1].lower().strip()
@@ -21,7 +35,7 @@ async def playmode_(client, message: Message, _):
     # خيار التعطيل
     if (str(query)).lower() in ["disable", "تعطيل"]:
         await set_cmode(message.chat.id, None)
-        return await message.reply_text("تم تعطيل وضع تشغيل القناة، سيتم التشغيل في المجموعة الآن.")
+        return await message.reply_text("تــم تــعــطــيــل وضــع تــشــغــيــل الــقــنــاة، ســيــتــم الــتــشــغــيــل فــي الــمــجــمــوعــة الآن.")
     
     # خيار القناة المرتبطة تلقائياً
     elif str(query) in ["linked", "مرتبطة"]:
@@ -30,33 +44,44 @@ async def playmode_(client, message: Message, _):
             chat_id = chat.linked_chat.id
             await set_cmode(message.chat.id, chat_id)
             return await message.reply_text(
-                f"تم ربط التشغيل بالقناة المرتبطة: {chat.linked_chat.title}\nالمعرف: {chat.linked_chat.id}"
+                f"تــم ربــط الــتــشــغــيــل بــالــقــنــاة الــمــرتــبــطــة : {chat.linked_chat.title}\nالــمــعــرف : {chat.linked_chat.id}"
             )
         else:
-            return await message.reply_text("هذه المجموعة لا تمتلك قناة مرتبطة بها في إعدادات تيليجرام.")
+            return await message.reply_text("هــذه الــمــجــمــوعــة لا تــمــتــلــك قــنــاة مــرتــبــطــة بــهــا فــي إعــدادات تــيــلــيــجــرام.")
     
     # خيار ربط قناة محددة
     else:
         try:
             chat = await app.get_chat(query)
         except:
-            return await message.reply_text("لم أستطع العثور على القناة، تأكد من المعرف أو أن البوت مشرف فيها.")
+            return await message.reply_text("لــم أســتــطــع الــعــثــور عــلــى الــقــنــاة، تــأكــد مــن الــمــعــرف أو أن الــبــوت مــشــرف فــيــهــا.")
         
         if chat.type != ChatType.CHANNEL:
-            return await message.reply_text("هذا المعرف لا ينتمي لقناة.")
+            return await message.reply_text("هــذا الــمــعــرف لا يــنــتــمــي لــقــنــاة.")
+        
+        # تهيئة المتغيرات لتجنب الأخطاء
+        crid = None
+        cusn = None
         
         try:
             async for user in app.get_chat_members(
                 chat.id, filter=ChatMembersFilter.ADMINISTRATORS
             ):
                 if user.status == ChatMemberStatus.OWNER:
-                    cusn = user.user.username
-                    crid = user.user.id
-        except:
-            return await message.reply_text("حدث خطأ، تأكد أنني مشرف في القناة أولاً.")
+                    # التأكد من أن حساب المالك موجود وليس محذوفاً
+                    if user.user:
+                        cusn = user.user.username
+                        crid = user.user.id
+                    break 
+        except Exception as e:
+            return await message.reply_text(f"حــدث خــطــأ، تــأكــد أنــنــي مــشــرف فــي الــقــنــاة ولــدي صــلاحــيــة رؤيــة الــمــشــرفــيــن.\nالــخــطــأ : {e}")
         
+        # إذا لم يتم العثور على مالك (مثلاً القناة لا مالك لها أو الحساب محذوف)
+        if crid is None:
+            return await message.reply_text("لــم أتــمــكــن مــن تــحــديــد مــالــك الــقــنــاة.")
+
         if crid != message.from_user.id:
-            return await message.reply_text(f"عذراً، يجب أن تكون مالك القناة لربطها.\nالمالك هو: @{cusn}")
+            return await message.reply_text(f"عــذراً، يــجــب أن تــكــون مــالــك الــقــنــاة لــربــطــهــا.\nالــمــالــك هــو : @{cusn}")
         
         await set_cmode(message.chat.id, chat.id)
-        return await message.reply_text(f"تم ربط التشغيل بالقناة: {chat.title}\nالمعرف: {chat.id}")
+        return await message.reply_text(f"تــم ربــط الــتــشــغــيــل بــالــقــنــاة : {chat.title}\nالــمــعــرف : {chat.id}")
