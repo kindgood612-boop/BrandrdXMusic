@@ -71,7 +71,7 @@ def stream_markup_timer(_, vidid, chat_id, played, dur):
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
         [
-            InlineKeyboardButton(text="المطور", url=f"tg://user?id={OWNER_ID}"),
+            InlineKeyboardButton(text="المطور", user_id=OWNER_ID),
             InlineKeyboardButton(text="قناة السورس", url=CHANNEL_LINK),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
@@ -79,7 +79,7 @@ def stream_markup_timer(_, vidid, chat_id, played, dur):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Stream Timer Markup (2) - (الدالة التي كانت ناقصة)
+#  Stream Timer Markup (2)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def stream_markup_timer2(_, vidid, chat_id, played, dur):
     played_sec = time_to_seconds(played)
@@ -102,7 +102,7 @@ def stream_markup_timer2(_, vidid, chat_id, played, dur):
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
         [
-            InlineKeyboardButton(text="المطور", url=f"tg://user?id={OWNER_ID}"),
+            InlineKeyboardButton(text="المطور", user_id=OWNER_ID),
             InlineKeyboardButton(text="قناة السورس", url=CHANNEL_LINK),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
@@ -122,7 +122,7 @@ def stream_markup(_, videoid, chat_id):
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
         [
-            InlineKeyboardButton(text="المطور", url=f"tg://user?id={OWNER_ID}"),
+            InlineKeyboardButton(text="المطور", user_id=OWNER_ID),
             InlineKeyboardButton(text="قناة السورس", url=CHANNEL_LINK),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
@@ -142,7 +142,7 @@ def stream_markup2(_, videoid, chat_id):
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
         [
-            InlineKeyboardButton(text="المطور", url=f"tg://user?id={OWNER_ID}"),
+            InlineKeyboardButton(text="المطور", user_id=OWNER_ID),
             InlineKeyboardButton(text="قناة السورس", url=CHANNEL_LINK),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
@@ -162,7 +162,7 @@ def telegram_markup(_, chat_id):
             InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
         ],
         [
-            InlineKeyboardButton(text="المطور", url=f"tg://user?id={OWNER_ID}"),
+            InlineKeyboardButton(text="المطور", user_id=OWNER_ID),
             InlineKeyboardButton(text="قناة السورس", url=CHANNEL_LINK),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
