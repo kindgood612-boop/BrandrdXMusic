@@ -10,6 +10,7 @@ from BrandrdXMusic.utils.formatters import time_to_seconds
 import aiohttp
 from BrandrdXMusic import LOGGER
 
+# --- إعدادات الـ API ---
 YOUR_API_URL = None
 FALLBACK_API_URL = "https://shrutibots.site"
 
@@ -19,6 +20,7 @@ async def load_api_url():
     
     try:
         async with aiohttp.ClientSession() as session:
+            # محاولة جلب رابط الـ API الأساسي
             async with session.get("https://pastebin.com/raw/rLsBhAQa", timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status == 200:
                     content = await response.text()
@@ -26,11 +28,12 @@ async def load_api_url():
                     logger.info("API URL loaded successfully")
                 else:
                     YOUR_API_URL = FALLBACK_API_URL
-                    logger.info("Using fallback API URL")
+                    logger.info("Using fallback API URL (Status != 200)")
     except Exception:
         YOUR_API_URL = FALLBACK_API_URL
-        logger.info("Using fallback API URL")
+        logger.info("Using fallback API URL (Exception)")
 
+# تشغيل دالة تحميل الـ API عند بدء التشغيل
 try:
     loop = asyncio.get_event_loop()
     if loop.is_running():
@@ -39,6 +42,9 @@ try:
         loop.run_until_complete(load_api_url())
 except RuntimeError:
     pass
+
+
+# --- دوال التحميل (Audio / Video) ---
 
 async def download_song(link: str) -> str:
     global YOUR_API_URL
@@ -57,6 +63,7 @@ async def download_song(link: str) -> str:
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
 
+    # لو الملف موجود بالفعل، لا داعي لإعادة تحميله
     if os.path.exists(file_path):
         return file_path
 
@@ -170,6 +177,8 @@ async def download_video(link: str) -> str:
     except Exception:
         return None
 
+# --- دوال المساعدة ---
+
 async def shell_cmd(cmd):
     proc = await asyncio.create_subprocess_shell(
         cmd,
@@ -183,6 +192,9 @@ async def shell_cmd(cmd):
         else:
             return errorz.decode("utf-8")
     return out.decode("utf-8")
+
+
+# --- كلاس YouTubeAPI الأساسي ---
 
 class YouTubeAPI:
     def __init__(self):
@@ -222,7 +234,7 @@ class YouTubeAPI:
         for result in (await results.next())["result"]:
             title = result["title"]
             duration_min = result["duration"]
-            # ⚠️ تم الإصلاح: حذفنا .split("?")[0]
+            # إصلاح: إزالة split للحفاظ على جودة الصورة
             thumbnail = result["thumbnails"][0]["url"]
             vidid = result["id"]
             duration_sec = int(time_to_seconds(duration_min)) if duration_min else 0
@@ -253,7 +265,7 @@ class YouTubeAPI:
             link = link.split("&")[0]
         results = VideosSearch(link, limit=1)
         for result in (await results.next())["result"]:
-            # ⚠️ تم الإصلاح: حذفنا .split("?")[0]
+            # إصلاح: إزالة split
             return result["thumbnails"][0]["url"]
 
     async def video(self, link: str, videoid: Union[bool, str] = None):
@@ -275,6 +287,7 @@ class YouTubeAPI:
             link = self.listbase + link
         if "&" in link:
             link = link.split("&")[0]
+        # استخدام yt-dlp للتعامل مع قوائم التشغيل
         playlist = await shell_cmd(
             f"yt-dlp -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link}"
         )
@@ -295,7 +308,7 @@ class YouTubeAPI:
             duration_min = result["duration"]
             vidid = result["id"]
             yturl = result["link"]
-            # ⚠️ تم الإصلاح: حذفنا .split("?")[0]
+            # إصلاح: إزالة split
             thumbnail = result["thumbnails"][0]["url"]
         track_details = {
             "title": title,
@@ -315,22 +328,26 @@ class YouTubeAPI:
         ydl = yt_dlp.YoutubeDL(ytdl_opts)
         with ydl:
             formats_available = []
-            r = ydl.extract_info(link, download=False)
-            for format in r["formats"]:
-                try:
-                    if "dash" not in str(format["format"]).lower():
-                        formats_available.append(
-                            {
-                                "format": format["format"],
-                                "filesize": format.get("filesize"),
-                                "format_id": format["format_id"],
-                                "ext": format["ext"],
-                                "format_note": format["format_note"],
-                                "yturl": link,
-                            }
-                        )
-                except:
-                    continue
+            try:
+                r = ydl.extract_info(link, download=False)
+                for format in r["formats"]:
+                    try:
+                        if "dash" not in str(format["format"]).lower():
+                            formats_available.append(
+                                {
+                                    "format": format["format"],
+                                    "filesize": format.get("filesize"),
+                                    "format_id": format["format_id"],
+                                    "ext": format["ext"],
+                                    "format_note": format["format_note"],
+                                    "yturl": link,
+                                }
+                            )
+                    except:
+                        continue
+            except Exception as e:
+                print(f"Formats Error: {e}")
+                return [], link
         return formats_available, link
 
     async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = None):
@@ -340,10 +357,15 @@ class YouTubeAPI:
             link = link.split("&")[0]
         a = VideosSearch(link, limit=10)
         result = (await a.next()).get("result")
+        
+        # التأكد من وجود نتائج
+        if not result or query_type >= len(result):
+            return None, None, None, None
+            
         title = result[query_type]["title"]
         duration_min = result[query_type]["duration"]
         vidid = result[query_type]["id"]
-        # ⚠️ تم الإصلاح: حذفنا .split("?")[0]
+        # إصلاح: إزالة split
         thumbnail = result[query_type]["thumbnails"][0]["url"]
         return title, duration_min, thumbnail, vidid
 
