@@ -6,9 +6,8 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 from youtubesearchpython.__future__ import VideosSearch
 from config import YOUTUBE_IMG_URL
 
-# دالة ذكية للبحث عن الخطوط في ملفاتك
+# دالة ذكية للبحث عن الخطوط
 def get_font(size):
-    # قائمة المسارات المحتملة للخط بناءً على صورتك
     possible_fonts = [
         "BrandrdXMusic/font.ttf",
         "BrandrdXMusic/assets/font.ttf",
@@ -18,15 +17,13 @@ def get_font(size):
     for font_path in possible_fonts:
         if os.path.isfile(font_path):
             return ImageFont.truetype(font_path, size)
-    # إذا لم يجد الخط يستخدم الافتراضي
     return ImageFont.load_default()
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 1. دالة الرسم والتصميم (Vinyl Style)
+# 1. دالة الرسم والتصميم
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def draw_thumb(thumbnail, title, userid, theme, duration, views, videoid):
     try:
-        # إعداد الخلفية
         if os.path.isfile(thumbnail):
             source = Image.open(thumbnail).convert("RGB")
         else:
@@ -38,7 +35,6 @@ async def draw_thumb(thumbnail, title, userid, theme, duration, views, videoid):
         overlay = Image.new('RGBA', (1280, 720), (0, 0, 0, 100))
         bg.paste(overlay, (0, 0), overlay)
 
-        # تصميم الأسطوانة (Vinyl)
         sz = 440
         mask = Image.new('L', (sz, sz), 0)
         ImageDraw.Draw(mask).ellipse((0, 0, sz, sz), fill=255)
@@ -77,14 +73,12 @@ async def draw_thumb(thumbnail, title, userid, theme, duration, views, videoid):
         bg.paste(shadow, (-60, (720-sz)//2 + 20), shadow)
         bg.paste(vinyl, (-80, (720-sz)//2), vinyl)
 
-        # الفقاعة الزجاجية
         cx, cy, cw, ch = 440, 160, 780, 420
         glass = Image.new('RGBA', (cw, ch), (255, 255, 255, 0))
         d_glass = ImageDraw.Draw(glass)
         d_glass.rounded_rectangle((0,0,cw,ch), radius=60, fill=(255,255,255,15), outline=(255,255,255,50), width=2)
         bg.paste(glass, (cx, cy), glass)
 
-        # النصوص (استخدام دالة البحث عن الخط)
         d = ImageDraw.Draw(bg)
         
         f_title = get_font(55)
@@ -117,9 +111,9 @@ async def draw_thumb(thumbnail, title, userid, theme, duration, views, videoid):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 2. الدالة الرئيسية (Main Entry Point)
+# 2. الدالة الرئيسية (تم تغيير اسمها إلى get_thumb)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async def gen_thumb(videoid, user_id):
+async def get_thumb(videoid):  # <--- كان اسمها gen_thumb والآن أصبحت get_thumb
     if not os.path.exists("cache"):
         os.makedirs("cache")
 
@@ -141,7 +135,6 @@ async def gen_thumb(videoid, user_id):
             except:
                 duration = "Unknown"
             
-            # الرابط الصحيح
             thumbnail = result["thumbnails"][0]["url"]
 
             try:
@@ -160,7 +153,6 @@ async def gen_thumb(videoid, user_id):
                     await f.write(await resp.read())
                     await f.close()
 
-        # استدعاء دالة الرسم
         final_image = await draw_thumb(
             f"cache/temp{videoid}.png", 
             title, 
