@@ -49,8 +49,7 @@ async def init():
     await userbot.start()
     await Hotty.start()
     
-    # تفعيل دوال المكالمات
-    await Hotty.decorators()
+    # تم إزالة السطر القديم Hotty.decorators() لأنه غير موجود في الكود الجديد ويسبب خطأ
     
     # رسالة التشغيل النهائية (بالإيموجي والزخرفة)
     LOGGER("BrandrdXMusic").info(
@@ -73,4 +72,5 @@ async def init():
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(init())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(init())
