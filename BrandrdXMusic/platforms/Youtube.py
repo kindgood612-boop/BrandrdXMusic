@@ -72,11 +72,14 @@ class YouTubeAPI:
             duration_min = result["duration"]
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
             vidid = result["id"]
+            # ✅ جلب المشاهدات
+            views = result["viewCount"]["short"]
             if str(duration_min) == "None":
                 duration_sec = 0
             else:
                 duration_sec = int(time_to_seconds(duration_min))
-        return title, duration_min, duration_sec, thumbnail, vidid
+        # ✅ إرجاع المشاهدات مع البيانات
+        return title, duration_min, duration_sec, thumbnail, vidid, views
 
     async def title(self, link: str, videoid: Union[bool, str] = None):
         if videoid:
@@ -183,12 +186,16 @@ class YouTubeAPI:
             vidid = result["id"]
             yturl = result["link"]
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
+            # ✅ جلب المشاهدات هنا
+            views = result["viewCount"]["short"]
+
         track_details = {
             "title": title,
             "link": yturl,
             "vidid": vidid,
             "duration_min": duration_min,
             "thumb": thumbnail,
+            "views": views, # ✅ تمت إضافتها للبيانات
         }
         return track_details, vidid
 
