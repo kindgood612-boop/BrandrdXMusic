@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 from youtubesearchpython import VideosSearch
 from config import YOUTUBE_IMG_URL
 
-# دالة التصميم الخاصة بك (تم تعديلها قليلاً لتقبل المسارات وتعمل مع get_thumb)
+# دالة التصميم الخاصة بك (تقوم برسم الأسطوانة والزجاج)
 async def gen_thumb(thumbnail, title, userid, theme, duration, views, videoid):
     try:
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -113,6 +113,10 @@ async def gen_thumb(thumbnail, title, userid, theme, duration, views, videoid):
 # الدالة الرئيسية التي يطلبها البوت (get_thumb)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def get_thumb(videoid):
+    # التأكد من وجود مجلد الكاش لتجنب الأخطاء
+    if not os.path.exists("cache"):
+        os.makedirs("cache")
+
     # إذا كانت الصورة موجودة مسبقاً في الكاش، قم بإرجاعها فوراً
     if os.path.isfile(f"cache/{videoid}.png"):
         return f"cache/{videoid}.png"
