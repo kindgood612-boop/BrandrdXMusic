@@ -3,9 +3,8 @@ from random import randint
 from typing import Union
 import asyncio
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# استدعاءات السورس الأساسية
 from BrandrdXMusic import app, YouTube
 from BrandrdXMusic.core.call import Hotty
 from BrandrdXMusic.misc import db
@@ -20,7 +19,6 @@ from BrandrdXMusic.utils.inline import (
     close_markup,
     stream_markup,
 )
-# تصحيح الخطأ الشهير هنا (Rename Class)
 from BrandrdXMusic.utils.pastebin import HottyBin as brandedBin
 from BrandrdXMusic.utils.stream.queue import put_queue, put_queue_index
 from BrandrdXMusic.utils.thumbnails import get_thumb
@@ -44,11 +42,10 @@ async def stream(
     if not result:
         return
 
-    # إيقاف التشغيل الإجباري لو مطلوب
     if forceplay:
         await Hotty.force_stop_stream(chat_id)
 
-    # 1. تشغيل قائمة تشغيل (Playlist)
+    # 1. PLAYLIST
     if streamtype == "playlist":
         msg = f"{_['play_19']}\n\n"
         count = 0
@@ -92,12 +89,10 @@ async def stream(
                     db[chat_id] = []
                 status = True if video else None
                 try:
-                    # هنا بيتم التحميل الفعلي
                     file_path, direct = await YouTube.download(
                         vidid, mystic, video=status, videoid=True
                     )
-                except Exception as e:
-                    # لو فشل التحميل، نعرض رسالة خطأ
+                except:
                     return await mystic.edit_text(_["play_3"])
 
                 await Hotty.join_call(
@@ -119,7 +114,6 @@ async def stream(
                     "video" if video else "audio",
                     forceplay=forceplay,
                 )
-                
                 img = await get_thumb(vidid)
                 button = stream_markup(_, vidid, chat_id)
                 run = await app.send_photo(
@@ -139,30 +133,34 @@ async def stream(
         if count == 0:
             return
         else:
-            # رفع القائمة على PasteBin
             link = await brandedBin(msg)
             lines = msg.count("\n")
             if lines >= 17:
                 car = os.linesep.join(msg.split(os.linesep)[:17])
             else:
                 car = msg
-            
-            # لاحظ: تأكد أن كلاس Carbon يعمل، وإلا استبدله بصورة ثابتة
             try:
                 from BrandrdXMusic import Carbon
                 carbon = await Carbon.generate(car, randint(100, 10000000))
             except:
-                carbon = config.STREAM_IMG_URL  # صورة احتياطية
-
-            upl = close_markup(_)
+                carbon = config.STREAM_IMG_URL
+            
+            queue_buttons = [
+                [
+                    InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                    InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+                ],
+                [InlineKeyboardButton(text="إغلاق", callback_data="close")]
+            ]
+            
             return await app.send_photo(
                 original_chat_id,
                 photo=carbon,
                 caption=_["play_21"].format(position, link),
-                reply_markup=upl,
+                reply_markup=InlineKeyboardMarkup(queue_buttons),
             )
 
-    # 2. تشغيل يوتيوب عادي (YouTube)
+    # 2. YOUTUBE
     elif streamtype == "youtube":
         link = result["link"]
         vidid = result["vidid"]
@@ -192,19 +190,26 @@ async def stream(
             )
             img = await get_thumb(vidid)
             position = len(db.get(chat_id)) - 1
-            button = aq_markup(_, chat_id)
+            
+            queue_buttons = [
+                [
+                    InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                    InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+                ],
+                [InlineKeyboardButton(text="إغلاق", callback_data="close")]
+            ]
+            
             await app.send_photo(
                 chat_id=original_chat_id,
                 photo=img,
                 caption=_["queue_4"].format(
                     position, title[:18], duration_min, user_name
                 ),
-                reply_markup=InlineKeyboardMarkup(button),
+                reply_markup=InlineKeyboardMarkup(queue_buttons),
             )
         else:
             if not forceplay:
                 db[chat_id] = []
-            
             await Hotty.join_call(
                 chat_id,
                 original_chat_id,
@@ -240,7 +245,7 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
 
-    # 3. ساوند كلاود (SoundCloud)
+    # 3. SOUNDCLOUD
     elif streamtype == "soundcloud":
         file_path = result["filepath"]
         title = result["title"]
@@ -259,11 +264,19 @@ async def stream(
                 "audio",
             )
             position = len(db.get(chat_id)) - 1
-            button = aq_markup(_, chat_id)
+            
+            queue_buttons = [
+                [
+                    InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                    InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+                ],
+                [InlineKeyboardButton(text="إغلاق", callback_data="close")]
+            ]
+
             await app.send_message(
                 chat_id=original_chat_id,
                 text=_["queue_4"].format(position, title[:18], duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
+                reply_markup=InlineKeyboardMarkup(queue_buttons),
             )
         else:
             if not forceplay:
@@ -293,7 +306,7 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
 
-    # 4. ملفات تليجرام (Telegram Files)
+    # 4. TELEGRAM
     elif streamtype == "telegram":
         file_path = result["path"]
         link = result["link"]
@@ -314,11 +327,19 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            button = aq_markup(_, chat_id)
+            
+            queue_buttons = [
+                [
+                    InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                    InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+                ],
+                [InlineKeyboardButton(text="إغلاق", callback_data="close")]
+            ]
+
             await app.send_message(
                 chat_id=original_chat_id,
                 text=_["queue_4"].format(position, title[:18], duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
+                reply_markup=InlineKeyboardMarkup(queue_buttons),
             )
         else:
             if not forceplay:
@@ -348,7 +369,7 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
 
-    # 5. بث مباشر (Live)
+    # 5. LIVE
     elif streamtype == "live":
         link = result["link"]
         vidid = result["vidid"]
@@ -370,21 +391,26 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            button = aq_markup(_, chat_id)
+            
+            queue_buttons = [
+                [
+                    InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                    InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+                ],
+                [InlineKeyboardButton(text="إغلاق", callback_data="close")]
+            ]
+
             await app.send_message(
                 chat_id=original_chat_id,
                 text=_["queue_4"].format(position, title[:18], duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
+                reply_markup=InlineKeyboardMarkup(queue_buttons),
             )
         else:
             if not forceplay:
                 db[chat_id] = []
-            
-            # استخراج رابط البث
             n, file_path = await YouTube.video(link)
             if n == 0:
                 raise AssistantErr(_["str_3"])
-            
             await Hotty.join_call(
                 chat_id,
                 original_chat_id,
@@ -420,7 +446,7 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
 
-    # 6. روابط مباشرة (M3U8 / Index)
+    # 6. INDEX
     elif streamtype == "index":
         link = result
         title = "ɪɴᴅᴇx ᴏʀ ᴍ3ᴜ8 ʟɪɴᴋ"
@@ -438,10 +464,18 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            button = aq_markup(_, chat_id)
+            
+            queue_buttons = [
+                [
+                    InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                    InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
+                ],
+                [InlineKeyboardButton(text="إغلاق", callback_data="close")]
+            ]
+
             await mystic.edit_text(
                 text=_["queue_4"].format(position, title[:27], duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
+                reply_markup=InlineKeyboardMarkup(queue_buttons),
             )
         else:
             if not forceplay:
