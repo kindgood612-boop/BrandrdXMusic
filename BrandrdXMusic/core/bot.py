@@ -15,7 +15,7 @@ class Hotty(Client):
             api_hash=config.API_HASH,
             bot_token=config.BOT_TOKEN,
             in_memory=True,
-            max_concurrent_transmissions=7,
+            parse_mode=ParseMode.HTML, # مهم جداً عشان التنسيق
         )
 
     async def start(self):
