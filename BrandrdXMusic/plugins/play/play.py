@@ -28,14 +28,8 @@ from config import BANNED_USERS, lyrical
 @app.on_message(
     filters.command(
         [
-            # الأوامر الأساسية (مجموعة)
-            "play", "vplay", "playforce", "vplayforce",
-            "شغل", "تشغيل", "فيديو", "فيد", "سمعني",
-            
-            # أوامر التشغيل في القناة (Channel Play)
-            "cplay", "cvplay", "cplayforce", "cvplayforce",
-            "تشغيل_قناة", "شغل_قناة", # صوت في القناة
-            "فيديو_قناة", "فيد_قناة"  # فيديو في القناة
+            "play", "vplay", "cplay", "cvplay", "playforce", "vplayforce", "cplayforce", "cvplayforce",
+            "شغل", "تشغيل", "فيديو", "فيد", "سمعني", "قناة"
         ]
     )
     & filters.group
@@ -53,20 +47,12 @@ async def play_commnd(
     url,
     fplay,
 ):
-    # ━━━ ضبط إعدادات القناة والفيديو بناءً على الأمر العربي ━━━
     command = message.command[0].lower()
-
-    # 1. تحديد إذا كان فيديو
-    # يشمل: vplay, cvplay, فيديو, فيد, فيديو_قناة, فيد_قناة
     if any(x in command for x in ["v", "فيديو", "فيد"]):
         video = True
-    
-    # 2. تحديد إذا كان تشغيل في القناة (Channel Play)
-    # يشمل: cplay, cvplay, تشغيل_قناة, شغل_قناة, فيديو_قناة
     if any(x in command for x in ["c", "قناة"]):
         channel = True
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
+
     mystic = await message.reply_text(
         _["play_2"].format(channel) if channel else _["play_1"]
     )
