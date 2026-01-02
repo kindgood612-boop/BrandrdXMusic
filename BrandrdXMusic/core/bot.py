@@ -32,19 +32,21 @@ class Hotty(Client):
             )
         except (errors.ChannelInvalid, errors.PeerIdInvalid):
             LOGGER(__name__).error(
-                "فشل البوت في الوصول إلى مجموعة/قناة السجل. تأكد من إضافة البوت إلى مجموعة/قناة السجل الخاصة بك."
+                "فشل البوت في الوصول إلى مجموعة السجل. تأكد من إضافة البوت إلى مجموعة السجل الخاصة بك."
             )
-
         except Exception as ex:
             LOGGER(__name__).error(
-                f"فشل البوت في الوصول إلى مجموعة/قناة السجل.\n  السبب : {type(ex).__name__}."
+                f"فشل البوت في الوصول إلى مجموعة السجل. السبب: {type(ex).__name__}"
             )
 
-        a = await self.get_chat_member(config.LOGGER_ID, self.id)
-        if a.status != ChatMemberStatus.ADMINISTRATOR:
-            LOGGER(__name__).error(
-                "يرجى رفع البوت كمشرف (Admin) في مجموعة/قناة السجل."
-            )
+        try:
+            a = await self.get_chat_member(config.LOGGER_ID, self.id)
+            if a.status != ChatMemberStatus.ADMINISTRATOR:
+                LOGGER(__name__).error(
+                    "يرجى رفع البوت كمشرف في مجموعة السجل."
+                )
+        except Exception:
+            pass
 
         LOGGER(__name__).info(f"تم بدء تشغيل بوت الميوزك باسم {self.name}")
 
