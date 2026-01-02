@@ -15,7 +15,6 @@ from BrandrdXMusic.utils.database import (
 )
 from config import SUPPORT_CHAT, adminlist, confirmer
 from strings import get_string
-
 from ..formatters import int_to_alpha
 
 
@@ -159,13 +158,15 @@ def AdminActual(mystic):
             
         if message.from_user.id not in SUDOERS:
             try:
-                member = (
-                    await app.get_chat_member(message.chat.id, message.from_user.id)
-                ).privileges
+                member = await app.get_chat_member(message.chat.id, message.from_user.id)
             except:
                 return
-            if not member.can_manage_video_chats:
+            
+            # --- التعديل الأهم هنا ---
+            # لازم نتأكد إن العضو عنده privileges أصلاً قبل ما نفحصها
+            if not member.privileges or not member.privileges.can_manage_video_chats:
                 return await message.reply(_["general_4"])
+        
         return await mystic(client, message, _)
 
     return wrapper
@@ -185,20 +186,22 @@ def ActualAdminCB(mystic):
             _ = get_string(language)
         except:
             _ = get_string("en")
+            
         if CallbackQuery.message.chat.type == ChatType.PRIVATE:
             return await mystic(client, CallbackQuery, _)
+            
         is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
         if not is_non_admin:
             try:
-                a = (
-                    await app.get_chat_member(
-                        CallbackQuery.message.chat.id,
-                        CallbackQuery.from_user.id,
-                    )
-                ).privileges
+                member = await app.get_chat_member(
+                    CallbackQuery.message.chat.id,
+                    CallbackQuery.from_user.id,
+                )
             except:
                 return await CallbackQuery.answer(_["general_4"], show_alert=True)
-            if not a.can_manage_video_chats:
+            
+            # --- التعديل الأهم هنا أيضاً ---
+            if not member.privileges or not member.privileges.can_manage_video_chats:
                 if CallbackQuery.from_user.id not in SUDOERS:
                     token = await int_to_alpha(CallbackQuery.from_user.id)
                     _check = await get_authuser_names(CallbackQuery.from_user.id)
