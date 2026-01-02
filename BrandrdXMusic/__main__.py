@@ -1,6 +1,5 @@
 import asyncio
 import importlib
-from sys import argv
 from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
 
@@ -14,6 +13,7 @@ from config import BANNED_USERS
 
 
 async def init():
+    # التحقق من وجود كود السيشن للحساب المساعد
     if (
         not config.STRING1
         and not config.STRING2
@@ -24,8 +24,8 @@ async def init():
         LOGGER(__name__).error("لم يتم العثور على كود سيشن الحساب المساعد... جاري الخروج")
         exit()
     
+    # تهيئة المشرفين وقوائم الحظر
     await sudo()
-    
     try:
         users = await get_gbanned()
         for user_id in users:
@@ -36,27 +36,23 @@ async def init():
     except:
         pass
     
+    # تشغيل البوت الأساسي
     await app.start()
     
+    # استدعاء ملفات البلاجنز
     for all_module in ALL_MODULES:
-        importlib.import_module("BrandrdXMusic.plugins" + all_module)
-    LOGGER("BrandrdXMusic.plugins").info("تم استدعاء المكاتب والملفات بنجاح")
+        importlib.import_module(f"BrandrdXMusic.plugins.{all_module}")
+        
+    LOGGER("BrandrdXMusic.plugins").info("تم استدعاء ملفات البوت بنجاح")
     
+    # تشغيل الحساب المساعد والمكالمات
     await userbot.start()
     await Hotty.start()
     
-    try:
-        await Hotty.stream_call("https://graph.org/file/e999c40cb700e7c684b75.mp4")
-    except NoActiveGroupCall:
-        LOGGER("BrandrdXMusic").error(
-            "يرجى فتح مكالمة صوتية في مجموعة السجل ليعمل البوت... جاري الايقاف"
-        )
-        exit()
-    except:
-        pass
-    
+    # تفعيل دوال المكالمات
     await Hotty.decorators()
     
+    # رسالة التشغيل النهائية (بالإيموجي والزخرفة)
     LOGGER("BrandrdXMusic").info(
         "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "🤍 تم تشغيل البوت بنجاح\n"
@@ -67,8 +63,10 @@ async def init():
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
     
+    # إبقاء البوت يعمل
     await idle()
     
+    # إيقاف التشغيل عند الإغلاق
     await app.stop()
     await userbot.stop()
     LOGGER("BrandrdXMusic").info("تم ايقاف البوت بنجاح")
