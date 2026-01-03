@@ -45,6 +45,7 @@ from strings import get_string
 # =======================
 
 AUTOEND = {}
+autoend = AUTOEND   # 🔥 مهم جدًا: عشان autoleave.py
 QUEUE_LOCK = asyncio.Lock()
 
 
