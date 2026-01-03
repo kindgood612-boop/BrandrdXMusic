@@ -11,23 +11,38 @@ from config import BANNED_USERS
 
 
 @app.on_message(
-    filters.command(["shuffle", "cshuffle", "خلط", "عشوائي", "لخبطة"]) & filters.group & ~BANNED_USERS
+    filters.command(
+        ["shuffle", "cshuffle", "خلط", "عشوائي", "لخبطة"],
+        prefixes=["/", "@", ".", "#", ""]
+    )
+    & filters.group
+    & ~BANNED_USERS
 )
 @AdminRightsCheck
-async def admins(Client, message: Message, _, chat_id):
-    check = db.get(chat_id)
-    if not check:
+async def shuffle_queue(client, message: Message, _, chat_id):
+    queue = db.get(chat_id)
+    if not queue:
         return await message.reply_text(_["queue_2"])
+
     try:
-        popped = check.pop(0)
-    except:
-        return await message.reply_text(_["admin_15"], reply_markup=close_markup(_))
-    check = db.get(chat_id)
-    if not check:
-        check.insert(0, popped)
-        return await message.reply_text(_["admin_15"], reply_markup=close_markup(_))
-    random.shuffle(check)
-    check.insert(0, popped)
+        current = queue.pop(0)
+    except IndexError:
+        return await message.reply_text(
+            _["admin_15"],
+            reply_markup=close_markup(_)
+        )
+
+    if not queue:
+        queue.insert(0, current)
+        return await message.reply_text(
+            _["admin_15"],
+            reply_markup=close_markup(_)
+        )
+
+    random.shuffle(queue)
+    queue.insert(0, current)
+
     await message.reply_text(
-        _["admin_16"].format(message.from_user.mention), reply_markup=close_markup(_)
+        _["admin_16"].format(message.from_user.mention),
+        reply_markup=close_markup(_)
     )
