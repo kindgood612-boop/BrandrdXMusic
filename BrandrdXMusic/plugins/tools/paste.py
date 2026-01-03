@@ -3,9 +3,8 @@ import os
 import re
 import aiofiles
 
-from pykeyboard import InlineKeyboard
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from BrandrdXMusic import app
 from BrandrdXMusic.utils.errors import capture_err
@@ -20,7 +19,7 @@ pattern = re.compile(r"^text/|json$|yaml$|xml$|toml$|x-sh$|x-shellscript$")
 @app.on_message(filters.command(["لصق", "رابط", "طباعة"], prefixes=["/", "!", "."]))
 @capture_err
 async def paste_func(_, message):
-    
+
     # لازم يكون فيه رد
     if not message.reply_to_message:
         return await message.reply_text(
@@ -63,13 +62,16 @@ async def paste_func(_, message):
     # ───── رفع النص ─────
     link = await HottyBin(content)
 
-    # زر الرابط
-    button = InlineKeyboard(row_width=1)
-    button.add(
-        InlineKeyboardButton(
-            text="• رابـط الـنـص •",
-            url=link
-        )
+    # زر الرابط (Pyrogram فقط)
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    text="• رابـط الـنـص •",
+                    url=link
+                )
+            ]
+        ]
     )
 
     # إرسال النتيجة
@@ -78,7 +80,7 @@ async def paste_func(_, message):
         await message.reply(
             "**تـم اسـتـخـراج الـرابـط بـنـجـاح** 🧚",
             quote=False,
-            reply_markup=button
+            reply_markup=keyboard
         )
     except Exception:
         pass
