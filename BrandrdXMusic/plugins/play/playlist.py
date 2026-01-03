@@ -177,6 +177,7 @@ async def get_keyboard(_, user_id):
         if not _note:
             continue
         title = _note.get("title", "Unknown").title()
+        # Creating InlineKeyboardButton properly
         row.append(InlineKeyboardButton(text=title[:20], callback_data=f"del_playlist {x}"))
         if len(row) == 2:
             keyboard.append(row)
@@ -189,6 +190,7 @@ async def get_keyboard(_, user_id):
         InlineKeyboardButton(text="إغـلاق", callback_data="close")
     ])
     
+    # Returning standard InlineKeyboardMarkup
     return InlineKeyboardMarkup(keyboard), count
 
 # --- Handlers ---
@@ -229,8 +231,6 @@ async def check_playlist(client, message: Message, _):
     
     try:
         # Assuming Carbon.generate is an awaitable coroutine.
-        # If it blocks, it should be wrapped, but respecting the "don't rewrite logic unless critical"
-        # and assuming library compliance.
         carbon = await Carbon.generate(car, randint(100, 10000000000))
         await get.delete()
         await message.reply_photo(carbon, caption=f"**[اضـغـط هـنـا لـعـرض الـقـائـمـة كـامـلـة]({link}) {emo}**")
