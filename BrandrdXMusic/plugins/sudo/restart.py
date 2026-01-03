@@ -12,7 +12,9 @@ from pyrogram import filters
 import config
 from BrandrdXMusic import app
 from BrandrdXMusic.misc import HAPP, SUDOERS, XCB
-from BrandrdXMusic.utils.database import (
+
+# [CORE MIGRATION] استيراد دوال قاعدة البيانات
+from BrandrdXMusic.core.database import (
     get_active_chats,
     remove_active_chat,
     remove_active_video_chat,
@@ -26,20 +28,27 @@ async def is_heroku():
     return "heroku" in socket.getfqdn()
 
 
+# ==========================================================
 # 1. أوامر جلب السجل (Logs)
-@app.on_message(filters.command(["getlog", "logs", "getlogs", "السجل", "سجل"], prefixes=["/", "!", "%", ",", "", ".", "@", "#"]) & SUDOERS)
+# ==========================================================
+@app.on_message(filters.command(["getlog", "logs", "getlogs", "السجل", "سجل"], prefixes=["", "/", "!", ".", "@", "#"]) & SUDOERS)
 async def log_(client, message):
     try:
-        await message.reply_document(
-            document="log.txt",
-            caption="🧚 **تـفـضـل مـلـف الـسـجـلات (Logs) الـخـاص بـالـبـوت...**"
-        )
+        if os.path.exists("log.txt"):
+            await message.reply_document(
+                document="log.txt",
+                caption="🧚 **تـفـضـل مـلـف الـسـجـلات (Logs) الـخـاص بـالـبـوت...**"
+            )
+        else:
+            await message.reply_text("🥀 **لا يـوجـد مـلـف سـجـلات حـالـيـاً.**")
     except:
         await message.reply_text("🥀 **عـذراً، حـدث خـطـأ أثـنـاء جـلـب الـسـجـلات.**")
 
 
+# ==========================================================
 # 2. أوامر التحديث (Update)
-@app.on_message(filters.command(["update", "gitpull", "تحديث", "التحديث"], prefixes=["/", "!", "%", ",", "", ".", "@", "#"]) & SUDOERS)
+# ==========================================================
+@app.on_message(filters.command(["update", "gitpull", "تحديث", "التحديث"], prefixes=["", "/", "!", ".", "@", "#"]) & SUDOERS)
 async def update_(client, message):
     if await is_heroku():
         if HAPP is None:
@@ -59,15 +68,17 @@ async def update_(client, message):
     await asyncio.sleep(7)
     
     verification = ""
+    # ملاحظة: تم تعديل طريقة الحصول على الرابط لتفادي الأخطاء المحتملة
     REPO_ = repo.remotes.origin.url.split(".git")[0]
     
     for checks in repo.iter_commits(f"HEAD..origin/{config.UPSTREAM_BRANCH}"):
         verification = str(checks.count())
         
     if verification == "":
-        return await response.edit("🥀 **الـبـوت مـحـدث بـالـفـعـل عـلـى آخـر إصـدار !**")
+        return await response.edit("🧚 **الـبـوت مـحـدث بـالـفـعـل عـلـى آخـر إصـدار !**")
         
     updates = ""
+    # دالة لتنسيق التاريخ (1st, 2nd, etc.)
     ordinal = lambda format: "%d%s" % (
         format,
         "tsnrhtdd"[(format // 10 % 10 != 1) * (format % 10 < 4) * format % 10 :: 4],
@@ -76,32 +87,33 @@ async def update_(client, message):
     for info in repo.iter_commits(f"HEAD..origin/{config.UPSTREAM_BRANCH}"):
         updates += f"<b>➣ #{info.count()}: <a href={REPO_}/commit/{info}>{info.summary}</a> ʙʏ -> {info.author}</b>\n\t\t\t\t<b>➥ ᴄᴏᴍᴍɪᴛᴇᴅ ᴏɴ :</b> {ordinal(int(datetime.fromtimestamp(info.committed_date).strftime('%d')))} {datetime.fromtimestamp(info.committed_date).strftime('%b')}, {datetime.fromtimestamp(info.committed_date).strftime('%Y')}\n\n"
     
-    _update_response_ = "♥️ **يـوجـد تـحـديـث جـديـد لـلـبـوت !**\n\n🧚 **يـتـم الآن سـحـب الـتـحـديـثـات...**\n\n<b><u>الـتـغـيـيـرات :</u></b>\n\n"
+    _update_response_ = "🧚 **يـوجـد تـحـديـث جـديـد لـلـبـوت !**\n\n🥀 **يـتـم الآن سـحـب الـتـحـديـثـات...**\n\n<b><u>الـتـغـيـيـرات :</u></b>\n\n"
     _final_updates_ = _update_response_ + updates
     
     if len(_final_updates_) > 4096:
         url = await HottyBin(updates)
         nrs = await response.edit(
-            f"♥️ **يـوجـد تـحـديـث جـديـد لـلـبـوت !**\n\n🧚 **يـتـم الآن سـحـب الـتـحـديـثـات...**\n\n<u><b>الـتـغـيـيـرات :</b></u>\n\n<a href={url}>اضـغـط هـنـا لـرؤيـة الـتـحـديـثـات</a>"
+            f"🧚 **يـوجـد تـحـديـث جـديـد لـلـبـوت !**\n\n🥀 **يـتـم الآن سـحـب الـتـحـديـثـات...**\n\n<u><b>الـتـغـيـيـرات :</b></u>\n\n<a href={url}>اضـغـط هـنـا لـرؤيـة الـتـحـديـثـات</a>"
         )
     else:
         nrs = await response.edit(_final_updates_, disable_web_page_preview=True)
         
     os.system("git stash &> /dev/null && git pull")
 
+    # إشعار المجموعات النشطة بالتحديث
     try:
         served_chats = await get_active_chats()
         for x in served_chats:
             try:
                 await app.send_message(
                     chat_id=int(x),
-                    text="⚡️ **تـم تـحـديـث الـبـوت... سـنـعـود لـلـعـمـل خـلال دقـائـق.**\n✨ {0}".format(app.mention),
+                    text="🥀 **تـم تـحـديـث الـبـوت... سـنـعـود لـلـعـمـل خـلال دقـائـق.**\n🧚 {0}".format(app.mention),
                 )
                 await remove_active_chat(x)
                 await remove_active_video_chat(x)
             except:
                 pass
-        await response.edit(f"{nrs.text}\n\n♥️ **تـم سـحـب الـتـحـديـثـات، جـارٍ إعـادة الـتـشـغـيـل...**")
+        await response.edit(f"{nrs.text}\n\n🧚 **تـم سـحـب الـتـحـديـثـات، جـارٍ إعـادة الـتـشـغـيـل...**")
     except:
         pass
 
@@ -123,16 +135,19 @@ async def update_(client, message):
         exit()
 
 
+# ==========================================================
 # 3. أوامر إعادة التشغيل (Restart)
-@app.on_message(filters.command(["restart", "اعادة تشغيل", "إعادة تشغيل"], prefixes=["/", "!", "%", ",", "", ".", "@", "#"]) & SUDOERS)
+# ==========================================================
+@app.on_message(filters.command(["restart", "اعادة تشغيل", "إعادة تشغيل"], prefixes=["", "/", "!", ".", "@", "#"]) & SUDOERS)
 async def restart_(_, message):
     response = await message.reply_text("🥀 **جـارٍ إعـادة الـتـشـغـيـل...**")
+    
     ac_chats = await get_active_chats()
     for x in ac_chats:
         try:
             await app.send_message(
                 chat_id=int(x),
-                text=f"🧚 **يـتـم إعـادة تـشـغـيـل الـبـوت (Reboot)...**\n⚡️ **يـمـكـنـك الـتـشـغـيـل مـجـدداً بـعـد 20 ثـانـيـة.**\n✨ {app.mention}",
+                text=f"🧚 **يـتـم إعـادة تـشـغـيـل الـبـوت...**\n🥀 **يـمـكـنـك الـتـشـغـيـل مـجـدداً بـعـد 20 ثـانـيـة.**\n✨ {app.mention}",
             )
             await remove_active_chat(x)
             await remove_active_video_chat(x)
@@ -147,6 +162,6 @@ async def restart_(_, message):
         pass
         
     await response.edit_text(
-        "♥️ **تـم بـدء عـمـلـيـة إعـادة الـتـشـغـيـل، انـتـظـر قـلـيـلاً حـتـى يـعـود الـبـوت لـلـعـمـل...**"
+        "🧚 **تـم بـدء عـمـلـيـة إعـادة الـتـشـغـيـل، انـتـظـر قـلـيـلاً حـتـى يـعـود الـبـوت لـلـعـمـل...**"
     )
     os.system(f"kill -9 {os.getpid()} && bash start")
