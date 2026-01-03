@@ -1,5 +1,9 @@
 app = "brandrdxmusic-x46dna"
 primary_region = "cdg"
+kill_timeout = 300  # ادينا للبوت 5 دقايق كاملين قبل ما يفصل
+
+[experimental]
+  auto_rollback = true
 
 [build]
   dockerfile = "Dockerfile"
@@ -8,3 +12,7 @@ primary_region = "cdg"
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 1024
+
+# إضافة رامات وهمية (Swap) عشان التسطيب ميفصلش
+[[swap]]
+  size_mb = 512
