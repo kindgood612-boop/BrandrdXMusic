@@ -4,7 +4,7 @@ from pyrogram.types import Message
 from BrandrdXMusic import app
 from BrandrdXMusic.core.call import Hotty
 from BrandrdXMusic.core.database import set_loop, get_cmode
-from BrandrdXMusic.core.decorators import AdminRightsCheck
+from BrandrdXMusic.utils.decorators import AdminRightsCheck
 from BrandrdXMusic.utils.inline import close_markup
 from config import BANNED_USERS
 
