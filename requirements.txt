@@ -11,7 +11,7 @@ motor
 pymongo
 dnspython
 
-yt-dlp
+yt-dlp>=2023.07.06
 youtube-search-python
 spotipy
 gTTS
