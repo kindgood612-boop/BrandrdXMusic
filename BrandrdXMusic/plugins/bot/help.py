@@ -3,7 +3,7 @@ from pyrogram import filters, types, enums
 from pyrogram.types import InlineKeyboardMarkup, Message, InlineKeyboardButton
 from BrandrdXMusic import app
 from BrandrdXMusic.utils import help_pannel
-from BrandrdXMusic.utils.database import get_lang
+from BrandrdXMusic.core.database import get_lang
 from BrandrdXMusic.utils.decorators.language import LanguageStart, languageCB
 from BrandrdXMusic.utils.inline.help import help_back_markup, private_help_panel
 from config import BANNED_USERS, SUPPORT_CHAT
