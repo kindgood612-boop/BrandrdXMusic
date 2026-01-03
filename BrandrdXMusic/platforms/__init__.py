@@ -1,3 +1,13 @@
+__all__ = [
+    "AppleAPI",
+    "CarbonAPI",
+    "RessoAPI",
+    "SoundAPI",
+    "SpotifyAPI",
+    "TeleAPI",
+    "YouTubeAPI",
+]
+
 from .Apple import AppleAPI
 from .Carbon import CarbonAPI
 from .Resso import RessoAPI
