@@ -14,15 +14,28 @@ from config import BANNED_USERS
 async def inline_query_handler(client, query):
     text = query.query.strip().lower()
     answers = []
+
     if text.strip() == "":
         try:
-            await client.answer_inline_query(query.id, results=answer, cache_time=10)
+            await client.answer_inline_query(
+                query.id,
+                results=answer,
+                cache_time=10
+            )
         except:
             return
-    else:
+        return
+
+    try:
         a = VideosSearch(text, limit=20)
-        result = (await a.next()).get("result")
-        for x in range(15):
+        data = await a.next()
+        result = data.get("result", [])
+    except:
+        return
+
+    # نفس العدد (15) لكن مع حماية
+    for x in range(min(15, len(result))):
+        try:
             title = (result[x]["title"]).title()
             duration = result[x]["duration"]
             views = result[x]["viewCount"]["short"]
@@ -31,18 +44,23 @@ async def inline_query_handler(client, query):
             channel = result[x]["channel"]["name"]
             link = result[x]["link"]
             published = result[x]["publishedTime"]
-            description = f"{views} | {duration} دقـيـقـة | {channel}  | {published}"
-            buttons = InlineKeyboardMarkup(
+        except:
+            continue
+
+        description = f"{views} | {duration} دقـيـقـة | {channel}  | {published}"
+
+        buttons = InlineKeyboardMarkup(
+            [
                 [
-                    [
-                        InlineKeyboardButton(
-                            text="يـوتـيـوب 🥀",
-                            url=link,
-                        )
-                    ],
-                ]
-            )
-            searched_text = f"""
+                    InlineKeyboardButton(
+                        text="يـوتـيـوب 🥀",
+                        url=link,
+                    )
+                ],
+            ]
+        )
+
+        searched_text = f"""
 🧚 <b>الـعـنـوان :</b> <a href={link}>{title}</a>
 
 🤍 <b>الـمـدة :</b> {duration} دقـيـقـة
@@ -52,17 +70,24 @@ async def inline_query_handler(client, query):
 
 
 <u><b>➻ بـحـث الانـلايـن بـواسـطـة {app.name} 🤍</b></u>"""
-            answers.append(
-                InlineQueryResultPhoto(
-                    photo_url=thumbnail,
-                    title=title,
-                    thumb_url=thumbnail,
-                    description=description,
-                    caption=searched_text,
-                    reply_markup=buttons,
-                )
+
+        answers.append(
+            InlineQueryResultPhoto(
+                photo_url=thumbnail,
+                title=title,
+                thumb_url=thumbnail,
+                description=description,
+                caption=searched_text,
+                parse_mode="html",
+                reply_markup=buttons,
             )
-        try:
-            return await client.answer_inline_query(query.id, results=answers)
-        except:
-            return
+        )
+
+    try:
+        await client.answer_inline_query(
+            query.id,
+            results=answers,
+            cache_time=10
+        )
+    except:
+        return
