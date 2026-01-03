@@ -36,7 +36,7 @@ from BrandrdXMusic.core.database.music import (
 )
 
 from BrandrdXMusic.core.exceptions import AssistantErr
-from BrandrdXMusic.core.stream.autoclear import auto_clean
+from BrandrdXMusic.utils.stream.autoclear import auto_clean
 from strings import get_string
 
 
