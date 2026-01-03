@@ -6,10 +6,7 @@ from typing import Union
 from pyrogram import Client
 from pyrogram.types import InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, filters
-from pytgcalls.exceptions import (
-    NoActiveGroupCall,
-    TelegramServerError,
-)
+from pytgcalls.exceptions import NoActiveGroupCall
 from pytgcalls.types import (
     MediaStream,
     AudioQuality,
@@ -220,7 +217,6 @@ class Call(PyTgCalls):
             )
         )
         if str(db[chat_id][0]["file"]) == str(file_path):
-            # التحديث الجديد: استخدام play بدلاً من change_stream
             await assistant.play(chat_id, stream)
         else:
             raise AssistantErr("Umm")
@@ -269,7 +265,6 @@ class Call(PyTgCalls):
                 audio_parameters=AudioQuality.HIGH,
                 video_flags=MediaStream.IGNORE,
             )
-        # التحديث الجديد: استخدام play بدلاً من change_stream
         await assistant.play(
             chat_id,
             stream,
@@ -292,7 +287,6 @@ class Call(PyTgCalls):
                 video_flags=MediaStream.IGNORE,
             )
         )
-        # التحديث الجديد: استخدام play بدلاً من change_stream
         await assistant.play(chat_id, stream)
 
     async def stream_call(self, link):
@@ -330,21 +324,16 @@ class Call(PyTgCalls):
             )
             
         try:
-            # التحديث الجديد: play هي الأهم، وهي بديل join
             await assistant.play(
                 chat_id,
                 stream,
             )
         except NoActiveGroupCall:
             try:
-                # إذا لم يكن هناك مكالمة، أنشئ واحدة ثم انضم
                 await self.userbot1.start_group_call(chat_id)
                 await assistant.play(chat_id, stream)
             except:
                 raise AssistantErr(_["call_8"])
-        # تم إزالة AlreadyJoinedError لأنه لم يعد موجوداً في النسخة الجديدة
-        except TelegramServerError:
-            raise AssistantErr(_["call_10"])
         except Exception as e:
             if "phone.CreateGroupCall" in str(e):
                 raise AssistantErr(_["call_8"])
@@ -416,7 +405,6 @@ class Call(PyTgCalls):
                         video_flags=MediaStream.IGNORE,
                     )
                 try:
-                    # استخدم play بدلاً من change_stream
                     await client.play(chat_id, stream)
                 except Exception:
                     return await app.send_message(
@@ -612,21 +600,16 @@ class Call(PyTgCalls):
             await self.five.start()
 
     async def decorators(self):
-        # التعديل هنا: الديكوريتور الموحد للنسخ الجديدة
         @self.one.on_update()
         @self.two.on_update()
         @self.three.on_update()
         @self.four.on_update()
         @self.five.on_update()
         async def stream_services_handler(client, update: Update):
-            # معالجة انتهاء البث
             if isinstance(update, StreamEnded):
                 await self.change_stream(client, update.chat_id)
-            # معالجة الخروج أو الطرد من المكالمة
             elif isinstance(update, GroupCallParticipant):
                  if update.action == GroupCallParticipant.LEFT:
-                     # نحتاج نتأكد إن البوت هو اللي خرج
-                     # في أغلب الأحوال، الكود القديم كان بيتعامل مع أي خروج
                      try:
                         await self.stop_stream(update.chat_id)
                      except:
