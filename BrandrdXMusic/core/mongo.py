@@ -23,7 +23,6 @@ try:
     )
     mongodb = _mongo_async_.BrandrdXMusic
 
-    # اختبار الاتصال async (غير مباشر)
     LOGGER(__name__).info("🔄 جاري التحقق من اتصال قاعدة البيانات async...")
 
     # ==========================
@@ -36,10 +35,10 @@ try:
     )
     pymongodb = _mongo_sync_.BrandrdXMusic
 
-    # اختبار الاتصال sync
-    _mongo_sync_.admin.command("ping")
+    # ❌ ممنوع ping هنا على Fly
+    # _mongo_sync_.admin.command("ping")
 
-    LOGGER(__name__).info("✅ تم الاتصال بقاعدة البيانات MongoDB بنجاح (Async + Sync)")
+    LOGGER(__name__).info("✅ تم تهيئة MongoDB (Async + Sync) بنجاح")
 
 except Exception as e:
     LOGGER(__name__).error(
