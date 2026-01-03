@@ -6,7 +6,7 @@ from pyrogram.enums import ChatType
 import config
 from BrandrdXMusic import app
 from BrandrdXMusic.core.call import Hotty, autoend
-from BrandrdXMusic.utils.database import get_client, is_active_chat, is_autoend
+from BrandrdXMusic.core.database import get_client, is_active_chat, is_autoend
 
 
 async def auto_leave():
