@@ -1,7 +1,7 @@
 FROM python:3.10-slim-bullseye
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg git \
+    && apt-get install -y --no-install-recommends ffmpeg git build-essential libxml2-dev libxslt-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
