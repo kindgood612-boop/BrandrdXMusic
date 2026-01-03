@@ -32,5 +32,12 @@ SafoneAPI
 MukeshAPI
 openai
 deep-translator
+
 lyricsgenius==3.0.1
 Unidecode
+
+requests
+urllib3
+pytz
+python-dateutil
+regex
