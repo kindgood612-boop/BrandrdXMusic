@@ -1,12 +1,17 @@
 import random
+from typing import Optional
 
 from BrandrdXMusic import userbot
 from .collections import assdb, assistantdict
 
 
 # ======================
-# Helpers
+# Basic Helpers
 # ======================
+
+async def get_assistant_number(chat_id: int) -> Optional[int]:
+    return assistantdict.get(chat_id)
+
 
 async def get_client(assistant: int):
     assistant = int(assistant)
@@ -24,7 +29,7 @@ async def get_client(assistant: int):
 
 
 # ======================
-# Assistant Selectors
+# Database Setters
 # ======================
 
 async def set_assistant_new(chat_id: int, number: int):
@@ -40,9 +45,6 @@ async def set_assistant_new(chat_id: int, number: int):
 async def set_assistant(chat_id: int):
     from BrandrdXMusic.core.userbot import assistants
 
-    if not assistants:
-        raise RuntimeError("No assistants available")
-
     ran_assistant = random.choice(assistants)
     assistantdict[chat_id] = ran_assistant
 
@@ -55,39 +57,40 @@ async def set_assistant(chat_id: int):
     return await get_client(ran_assistant)
 
 
+# ======================
+# Get Assistant (Userbot)
+# ======================
+
 async def get_assistant(chat_id: int):
     from BrandrdXMusic.core.userbot import assistants
-
-    if not assistants:
-        raise RuntimeError("No assistants available")
 
     assistant = assistantdict.get(chat_id)
 
     if not assistant:
         dbassistant = await assdb.find_one({"chat_id": chat_id})
+
         if not dbassistant:
             return await set_assistant(chat_id)
 
-        assistant = dbassistant.get("assistant")
+        got_assis = int(dbassistant.get("assistant", 0))
+        if got_assis in assistants:
+            assistantdict[chat_id] = got_assis
+            return await get_client(got_assis)
+
+        return await set_assistant(chat_id)
 
     if assistant in assistants:
-        assistantdict[chat_id] = assistant
-        client = await get_client(assistant)
-        if client:
-            return client
+        return await get_client(assistant)
 
     return await set_assistant(chat_id)
 
 
 # ======================
-# Calls (PyTgCalls)
+# Calls Assistant Logic
 # ======================
 
-async def set_calls_assistant(chat_id: int):
+async def set_calls_assistant(chat_id: int) -> int:
     from BrandrdXMusic.core.userbot import assistants
-
-    if not assistants:
-        raise RuntimeError("No assistants available")
 
     ran_assistant = random.choice(assistants)
     assistantdict[chat_id] = ran_assistant
@@ -102,34 +105,44 @@ async def set_calls_assistant(chat_id: int):
 
 
 async def group_assistant(self, chat_id: int):
+    """
+    IMPORTANT:
+    This function MUST return a PyTgCalls instance
+    (self.one / self.two / ...)
+    """
     from BrandrdXMusic.core.userbot import assistants
-
-    if not assistants:
-        raise RuntimeError("No assistants available")
 
     assistant = assistantdict.get(chat_id)
 
     if not assistant:
         dbassistant = await assdb.find_one({"chat_id": chat_id})
+
         if not dbassistant:
-            assistant = await set_calls_assistant(chat_id)
+            assis = await set_calls_assistant(chat_id)
         else:
-            assistant = dbassistant.get("assistant")
+            assis = int(dbassistant.get("assistant", 0))
+            if assis in assistants:
+                assistantdict[chat_id] = assis
+            else:
+                assis = await set_calls_assistant(chat_id)
+    else:
+        if assistant in assistants:
+            assis = assistant
+        else:
+            assis = await set_calls_assistant(chat_id)
 
-    if assistant not in assistants:
-        assistant = await set_calls_assistant(chat_id)
+    assis = int(assis)
 
-    assistantdict[chat_id] = assistant
-
-    if assistant == 1:
+    if assis == 1:
         return self.one
-    elif assistant == 2:
+    elif assis == 2:
         return self.two
-    elif assistant == 3:
+    elif assis == 3:
         return self.three
-    elif assistant == 4:
+    elif assis == 4:
         return self.four
-    elif assistant == 5:
+    elif assis == 5:
         return self.five
 
-    raise RuntimeError("Invalid assistant selected")
+    # Fallback (safety)
+    return self.one
