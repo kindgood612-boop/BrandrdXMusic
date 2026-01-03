@@ -7,7 +7,19 @@ from pyrogram.raw.functions.phone import CreateGroupCall
 from pyrogram.errors import ChatAdminRequired
 
 from pytgcalls import PyTgCalls
-from pytgcalls.exceptions import AlreadyInCallError, NoActiveGroupCall
+
+# =======================
+# PyTgCalls Compatibility (2.2.8 / 3.x)
+# =======================
+try:
+    # py-tgcalls 3.x
+    from pytgcalls.exceptions import AlreadyInCallError, NoActiveGroupCall
+except ImportError:
+    # py-tgcalls 2.2.8
+    from pytgcalls.exceptions import AlreadyJoinedError, GroupCallNotFoundError
+    AlreadyInCallError = AlreadyJoinedError
+    NoActiveGroupCall = GroupCallNotFoundError
+
 from pytgcalls.types import MediaStream, AudioQuality, VideoQuality, Update
 from pytgcalls.types.stream import StreamAudioEnded
 
@@ -15,7 +27,7 @@ import config
 from BrandrdXMusic import LOGGER, app, YouTube
 from BrandrdXMusic.misc import db
 
-# ===== Database (NEW STRUCTURE) =====
+# ===== Database (CORE STRUCTURE) =====
 from BrandrdXMusic.core.database.assistants import group_assistant
 from BrandrdXMusic.core.database.settings import (
     get_lang,
@@ -25,7 +37,7 @@ from BrandrdXMusic.core.database.settings import (
 )
 from BrandrdXMusic.core.database.queries import set_queries
 
-from BrandrdXMusic.utils.database import (
+from BrandrdXMusic.core.database.music import (
     add_active_chat,
     add_active_video_chat,
     remove_active_chat,
@@ -33,8 +45,8 @@ from BrandrdXMusic.utils.database import (
     music_on,
 )
 
-from BrandrdXMusic.utils.exceptions import AssistantErr
-from BrandrdXMusic.utils.stream.autoclear import auto_clean
+from BrandrdXMusic.core.exceptions import AssistantErr
+from BrandrdXMusic.core.stream.autoclear import auto_clean
 from strings import get_string
 
 
@@ -128,7 +140,7 @@ class Call:
         assistant = await group_assistant(self, chat_id)
         try:
             await _clear_(chat_id)
-            await assistant.leave_group_call(chat_id)  # استخدم leave_group_call للخروج من المكالمة1
+            await assistant.leave_group_call(chat_id)
         except Exception:
             pass
 
@@ -147,11 +159,9 @@ class Call:
         language = await get_lang(chat_id)
         _ = get_string(language)
 
-        # تحقق من صحة الرابط أو الملف
         if not link.startswith("http") and not os.path.isfile(link):
             raise AssistantErr(_["call_7"])
 
-        # إعداد وسائط الصوت/الفيديو
         stream = MediaStream(
             link,
             audio_parameters=AudioQuality.HIGH,
@@ -163,7 +173,6 @@ class Call:
             await assistant.play(chat_id, stream)
 
         except NoActiveGroupCall:
-            # إنشاء مكالمة جديدة باستخدام Pyrogram ثم تشغيل الوسائط
             try:
                 await app.invoke(
                     CreateGroupCall(
@@ -178,7 +187,6 @@ class Call:
         except AlreadyInCallError:
             raise AssistantErr(_["call_9"])
 
-        # إضافة المحادثة النشطة للإحصائيات
         await add_active_chat(chat_id)
         await music_on(chat_id)
         await set_queries(1)
@@ -186,12 +194,11 @@ class Call:
         if video:
             await add_active_video_chat(chat_id)
 
-        # تفعيل المراقب للإيقاف التلقائي إذا كان مفعلاً
         if await is_autoend():
             asyncio.create_task(self.autoend_watcher(chat_id))
 
     # =======================
-    # Change Stream (Next in Queue)
+    # Change Stream
     # =======================
 
     async def change_stream(self, client: PyTgCalls, chat_id: int):
@@ -270,7 +277,7 @@ class Call:
                 return
 
     # =======================
-    # Start & Stream-End Decorators
+    # Start & Decorators
     # =======================
 
     async def start(self):
