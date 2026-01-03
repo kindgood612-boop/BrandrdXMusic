@@ -21,44 +21,63 @@ from config import BANNED_USERS
 
 
 async def init():
-    # التحقق من وجود أكواد السيشن للحسابات المساعدة
-    if (
-        not config.STRING1
-        and not config.STRING2
-        and not config.STRING3
-        and not config.STRING4
-        and not config.STRING5
-    ):
-        LOGGER(__name__).error("لم يتم العثور على كود سيشن الحساب المساعد... جاري الخروج")
-        exit(1)
+    # =======================
+    # Check assistant sessions
+    # =======================
+    if not any([
+        config.STRING1,
+        config.STRING2,
+        config.STRING3,
+        config.STRING4,
+        config.STRING5,
+    ]):
+        LOGGER(__name__).error(
+            "❌ لم يتم العثور على أي كود سيشن للحسابات المساعدة"
+        )
+        return
 
-    # تهيئة المشرفين وقوائم الحظر
+    # =======================
+    # Load sudo & bans
+    # =======================
     await sudo()
+
     try:
-        users = await get_gbanned()
-        for user_id in users:
-            BANNED_USERS.add(user_id)
+        for user_id in await get_gbanned():
+            BANNED_USERS.add(int(user_id))
 
-        users = await get_banned_users()
-        for user_id in users:
-            BANNED_USERS.add(user_id)
-    except Exception:
-        pass
+        for user_id in await get_banned_users():
+            BANNED_USERS.add(int(user_id))
+    except Exception as e:
+        LOGGER(__name__).warning(f"Banned users load skipped: {e}")
 
-    # تشغيل البوت الأساسي
+    # =======================
+    # 🔥 LOAD PLUGINS FIRST
+    # =======================
+    for module_name in ALL_MODULES:
+        try:
+            importlib.import_module(f"BrandrdXMusic.plugins.{module_name}")
+        except Exception as e:
+            LOGGER("BrandrdXMusic.plugins").error(
+                f"❌ خطأ في تحميل البلجن {module_name}: {e}"
+            )
+
+    LOGGER("BrandrdXMusic.plugins").info("✅ تم استدعاء ملفات البوت بنجاح")
+
+    # =======================
+    # Start main bot
+    # =======================
     await app.start()
 
-    # استدعاء ملفات البلجنز
-    for module_name in ALL_MODULES:
-        importlib.import_module(f"BrandrdXMusic.plugins.{module_name}")
-    LOGGER("BrandrdXMusic.plugins").info("تم استدعاء ملفات البوت بنجاح")
-
-    # تشغيل الحساب المساعد و PyTgCalls
+    # =======================
+    # Start userbot + calls
+    # =======================
     await userbot.start()
     await Hotty.start()
     await Hotty.decorators()
 
-    # رسالة تشغيل
+    # =======================
+    # Startup message
+    # =======================
     LOGGER("BrandrdXMusic").info(
         "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "🤍 تم تشغيل البوت بنجاح\n"
@@ -69,11 +88,18 @@ async def init():
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
 
+    # =======================
+    # Idle (IMPORTANT)
+    # =======================
     await idle()
 
-    await app.stop()
+    # =======================
+    # Graceful shutdown
+    # =======================
+    LOGGER("BrandrdXMusic").info("🛑 جاري إيقاف البوت...")
+    await Hotty.one.stop()
     await userbot.stop()
-    LOGGER("BrandrdXMusic").info("تم ايقاف البوت بنجاح")
+    await app.stop()
 
 
 if __name__ == "__main__":
