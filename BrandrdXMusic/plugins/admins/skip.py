@@ -1,12 +1,12 @@
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram.types import Message, InlineKeyboardMarkup
 
 import config
-from BrandrdXMusic import YouTube, app
+from BrandrdXMusic import app, YouTube
 from BrandrdXMusic.core.call import Hotty
 from BrandrdXMusic.misc import db
-from BrandrdXMusic.utils.database import get_loop
-from BrandrdXMusic.utils.decorators import AdminRightsCheck
+from BrandrdXMusic.core.database import get_loop
+from BrandrdXMusic.core.decorators import AdminRightsCheck
 from BrandrdXMusic.utils.inline import close_markup, stream_markup, stream_markup2
 from BrandrdXMusic.utils.stream.autoclear import auto_clean
 from BrandrdXMusic.utils.thumbnails import get_thumb
@@ -14,255 +14,137 @@ from config import BANNED_USERS
 
 
 @app.on_message(
-    filters.command(["skip", "cskip", "next", "cnext", "تخطي", "التالي", "سكب", "كسكب", "cسكب"]) 
-    & filters.group 
+    filters.command(
+        ["skip", "cskip", "next", "cnext", "تخطي", "التالي", "سكب", "كسكب"],
+        prefixes=["/", "@", ".", "#", ""]
+    )
+    & filters.group
     & ~BANNED_USERS
 )
 @AdminRightsCheck
-async def skip(cli, message: Message, _, chat_id):
-    # --- تعديل: التحقق إذا كان الأمر يخص القناة ---
-    # نحدد اسم المستخدم بشكل افتراضي
+async def skip_track(client, message: Message, _, chat_id):
     requester = message.from_user.mention if message.from_user else message.chat.title
-    
-    # الكلمات التي تدل على أن الأمر للقناة
-    channel_keywords = ["قناة", "channel", "cskip", "كسكب", "cسكب"]
-    is_channel_cmd = False
 
-    # فحص إذا كان نص الرسالة يحتوي على كلمة قناة أو الأمر نفسه مخصص للقناة
-    for word in channel_keywords:
-        if word in message.text or message.command[0] in ["cskip", "كسكب", "cسكب"]:
-            is_channel_cmd = True
-            break
-    
-    # إذا تم اكتشاف طلب قناة، نحاول تبديل الآيدي
-    if is_channel_cmd:
+    # دعم القناة المرتبطة
+    if message.command[0] in ["cskip", "cnext", "كسكب"]:
         if message.chat.linked_chat:
             chat_id = message.chat.linked_chat.id
-            requester = message.chat.title # في القناة نظهر اسم الجروب/القناة بدل الشخص
-            
-            # تنظيف النص من كلمة قناة عشان الأرقام (لو كتب تخطي قناة 2)
-            # هذه خطوة تحسينية بسيطة، لكن الكود الأصلي سيعمل حتى بدونها لأنه سيعتبرها نصاً غير رقمي
-    # -----------------------------------------------
+            requester = message.chat.title
 
-    if not len(message.command) < 2:
+    # التحقق من اللوب
+    if len(message.command) > 1:
         loop = await get_loop(chat_id)
         if loop != 0:
             return await message.reply_text(_["admin_8"])
-        
-        # محاولة استخراج الرقم إذا وجد
-        state = message.text.split(None, 1)[1].strip()
-        
-        # إذا كانت الكلمة الثانية هي "قناة"، نتجاهلها ونعتبرها تخطي عادي (رقم 1)
-        # إلا لو المستخدم كتب رقم بعدها، وهذا يتطلب منطق معقد، لذا سنعتمد السلوك الافتراضي
-        
-        if state.isnumeric():
-            state = int(state)
-            check = db.get(chat_id)
-            if check:
-                count = len(check)
-                if count > 2:
-                    count = int(count - 1)
-                    if 1 <= state <= count:
-                        for x in range(state):
-                            popped = None
-                            try:
-                                popped = check.pop(0)
-                            except:
-                                return await message.reply_text(_["admin_12"])
-                            if popped:
-                                await auto_clean(popped)
-                            if not check:
-                                try:
-                                    await message.reply_text(
-                                        text=_["admin_6"].format(
-                                            requester,
-                                            message.chat.title,
-                                        ),
-                                        reply_markup=close_markup(_),
-                                    )
-                                    await Hotty.stop_stream(chat_id)
-                                except:
-                                    return
-                                break
-                    else:
-                        return await message.reply_text(_["admin_11"].format(count))
-                else:
-                    return await message.reply_text(_["admin_10"])
-            else:
-                return await message.reply_text(_["queue_2"])
-        else:
-            # إذا لم يكن رقم (مثلاً كتب: تخطي قناة)، نذهب للتخطي الافتراضي أدناه
-            pass 
 
-    # --- التخطي الافتراضي (أغنية واحدة) ---
-    check = db.get(chat_id)
-    popped = None
-    try:
-        popped = check.pop(0)
-        if popped:
-            await auto_clean(popped)
-        if not check:
-            await message.reply_text(
-                text=_["admin_6"].format(
-                    requester, message.chat.title
-                ),
-                reply_markup=close_markup(_),
-            )
-            try:
+        arg = message.command[1]
+        if arg.isnumeric():
+            skip_count = int(arg)
+            queue = db.get(chat_id)
+
+            if not queue:
+                return await message.reply_text(_["queue_2"])
+
+            if len(queue) <= 1:
+                return await message.reply_text(_["admin_10"])
+
+            max_skip = len(queue) - 1
+            if skip_count > max_skip:
+                return await message.reply_text(_["admin_11"].format(max_skip))
+
+            for _ in range(skip_count):
+                popped = queue.pop(0)
+                await auto_clean(popped)
+
+            if not queue:
+                await message.reply_text(
+                    _["admin_6"].format(requester, message.chat.title),
+                    reply_markup=close_markup(_),
+                )
                 return await Hotty.stop_stream(chat_id)
-            except:
-                return
+
+    # تخطي افتراضي (أغنية واحدة)
+    queue = db.get(chat_id)
+    if not queue:
+        return await message.reply_text(_["queue_2"])
+
+    try:
+        popped = queue.pop(0)
+        await auto_clean(popped)
     except:
-        try:
-            await message.reply_text(
-                text=_["admin_6"].format(
-                    requester, message.chat.title
-                ),
-                reply_markup=close_markup(_),
-            )
-            return await Hotty.stop_stream(chat_id)
-        except:
-            return
-            
-    # --- تشغيل الأغنية التالية ---
-    queued = check[0]["file"]
-    title = (check[0]["title"]).title()
-    user = check[0]["by"]
-    streamtype = check[0]["streamtype"]
-    videoid = check[0]["vidid"]
-    status = True if str(streamtype) == "video" else None
+        await message.reply_text(
+            _["admin_6"].format(requester, message.chat.title),
+            reply_markup=close_markup(_),
+        )
+        return await Hotty.stop_stream(chat_id)
+
+    if not queue:
+        await message.reply_text(
+            _["admin_6"].format(requester, message.chat.title),
+            reply_markup=close_markup(_),
+        )
+        return await Hotty.stop_stream(chat_id)
+
+    # تشغيل التالي
+    track = queue[0]
+    file_path = track["file"]
+    title = track["title"].title()
+    user = track["by"]
+    streamtype = track["streamtype"]
+    videoid = track["vidid"]
+    is_video = streamtype == "video"
+
     db[chat_id][0]["played"] = 0
-    exis = (check[0]).get("old_dur")
-    if exis:
-        db[chat_id][0]["dur"] = exis
-        db[chat_id][0]["seconds"] = check[0]["old_second"]
-        db[chat_id][0]["speed_path"] = None
+
+    if track.get("old_dur"):
+        db[chat_id][0]["dur"] = track["old_dur"]
+        db[chat_id][0]["seconds"] = track["old_second"]
         db[chat_id][0]["speed"] = 1.0
-    if "live_" in queued:
-        n, link = await YouTube.video(videoid, True)
-        if n == 0:
-            return await message.reply_text(_["admin_7"].format(title))
-        try:
+        db[chat_id][0]["speed_path"] = None
+
+    try:
+        if "live_" in file_path:
+            _, link = await YouTube.video(videoid, True)
             image = await YouTube.thumbnail(videoid, True)
-        except:
-            image = None
-        try:
-            await Hotty.skip_stream(chat_id, link, video=status, image=image)
-        except:
-            return await message.reply_text(_["call_6"])
-        button = stream_markup2(_, chat_id)
-        img = await get_thumb(videoid)
-        run = await message.reply_photo(
-            photo=img,
-            caption=_["stream_1"].format(
-                f"https://t.me/{app.username}?start=info_{videoid}",
-                title[:23],
-                check[0]["dur"],
-                user,
-            ),
-            reply_markup=InlineKeyboardMarkup(button),
-        )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "tg"
-    elif "vid_" in queued:
-        mystic = await message.reply_text(_["call_7"], disable_web_page_preview=True)
-        try:
-            file_path, direct = await YouTube.download(
-                videoid,
-                mystic,
-                videoid=True,
-                video=status,
-            )
-        except:
-            return await mystic.edit_text(_["call_6"])
-        try:
-            image = await YouTube.thumbnail(videoid, True)
-        except:
-            image = None
-        try:
-            await Hotty.skip_stream(chat_id, file_path, video=status, image=image)
-        except:
-            return await mystic.edit_text(_["call_6"])
-        button = stream_markup(_, videoid, chat_id)
-        img = await get_thumb(videoid)
-        run = await message.reply_photo(
-            photo=img,
-            caption=_["stream_1"].format(
-                f"https://t.me/{app.username}?start=info_{videoid}",
-                title[:23],
-                check[0]["dur"],
-                user,
-            ),
-            reply_markup=InlineKeyboardMarkup(button),
-        )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "stream"
-        await mystic.delete()
-    elif "index_" in queued:
-        try:
-            await Hotty.skip_stream(chat_id, videoid, video=status)
-        except:
-            return await message.reply_text(_["call_6"])
-        button = stream_markup2(_, chat_id)
-        run = await message.reply_photo(
-            photo=config.STREAM_IMG_URL,
-            caption=_["stream_2"].format(user),
-            reply_markup=InlineKeyboardMarkup(button),
-        )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "tg"
-    else:
-        if videoid == "telegram":
-            image = None
-        elif videoid == "soundcloud":
-            image = None
-        else:
-            try:
-                image = await YouTube.thumbnail(videoid, True)
-            except:
-                image = None
-        try:
-            await Hotty.skip_stream(chat_id, queued, video=status, image=image)
-        except:
-            return await message.reply_text(_["call_6"])
-        if videoid == "telegram":
+            await Hotty.skip_stream(chat_id, link, video=is_video, image=image)
             button = stream_markup2(_, chat_id)
-            run = await message.reply_photo(
-                photo=config.TELEGRAM_AUDIO_URL
-                if str(streamtype) == "audio"
-                else config.TELEGRAM_VIDEO_URL,
-                caption=_["stream_1"].format(
-                    config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
-        elif videoid == "soundcloud":
-            button = stream_markup(_, chat_id)
-            run = await message.reply_photo(
-                photo=config.SOUNCLOUD_IMG_URL
-                if str(streamtype) == "audio"
-                else config.TELEGRAM_VIDEO_URL,
-                caption=_["stream_1"].format(
-                    config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
-        else:
+
+        elif "vid_" in file_path:
+            msg = await message.reply_text(_["call_7"])
+            file_path, _ = await YouTube.download(videoid, msg, videoid=True, video=is_video)
+            image = await YouTube.thumbnail(videoid, True)
+            await Hotty.skip_stream(chat_id, file_path, video=is_video, image=image)
+            await msg.delete()
             button = stream_markup(_, videoid, chat_id)
-            img = await get_thumb(videoid)
-            run = await message.reply_photo(
-                photo=img,
-                caption=_["stream_1"].format(
-                    f"https://t.me/{app.username}?start=info_{videoid}",
-                    title[:23],
-                    check[0]["dur"],
-                    user,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
+
+        elif "index_" in file_path:
+            await Hotty.skip_stream(chat_id, videoid, video=is_video)
+            button = stream_markup2(_, chat_id)
+
+        else:
+            image = await YouTube.thumbnail(videoid, True) if videoid not in ["telegram", "soundcloud"] else None
+            await Hotty.skip_stream(chat_id, file_path, video=is_video, image=image)
+            button = stream_markup(_, videoid, chat_id)
+
+    except:
+        return await message.reply_text(_["call_6"])
+
+    img = (
+        await get_thumb(videoid)
+        if videoid not in ["telegram", "soundcloud"]
+        else config.STREAM_IMG_URL
+    )
+
+    run = await message.reply_photo(
+        photo=img,
+        caption=_["stream_1"].format(
+            f"https://t.me/{app.username}?start=info_{videoid}",
+            title[:23],
+            track["dur"],
+            user,
+        ),
+        reply_markup=InlineKeyboardMarkup(button),
+    )
+
+    db[chat_id][0]["mystic"] = run
+    db[chat_id][0]["markup"] = "stream"
