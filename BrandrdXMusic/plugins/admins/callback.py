@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from BrandrdXMusic import YouTube, app
 from BrandrdXMusic.core.call import Hotty
 from BrandrdXMusic.misc import SUDOERS, db
-from BrandrdXMusic.utils.database import (
+from BrandrdXMusic.core.database import (
     get_active_chats,
     get_lang,
     get_upvote_count,
@@ -439,3 +439,4 @@ async def markup_timer():
 
 
 asyncio.create_task(markup_timer())
+
