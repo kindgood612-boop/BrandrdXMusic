@@ -3,7 +3,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from BrandrdXMusic import app
 from config import OWNER_ID
-from BrandrdXMusic.utils.database import add_served_chat, get_assistant
+from BrandrdXMusic.core.database import add_served_chat, get_assistant
 
 # إعدادات السورس
 REPO_IMG = "https://files.catbox.moe/b6533n.jpg"
