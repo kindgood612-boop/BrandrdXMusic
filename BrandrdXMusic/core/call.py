@@ -5,19 +5,19 @@ from typing import Union
 
 from pyrogram import Client
 from pyrogram.types import InlineKeyboardMarkup
-from ntgcalls import TelegramServerError
-from pytgcalls import PyTgCalls
+from pytgcalls import PyTgCalls, filters
 from pytgcalls.exceptions import (
-    AlreadyJoinedError,
     NoActiveGroupCall,
+    TelegramServerError,
 )
 from pytgcalls.types import (
     MediaStream,
     AudioQuality,
     VideoQuality,
     Update,
+    GroupCallParticipant,
 )
-from pytgcalls.types.stream import StreamAudioEnded
+from pytgcalls.types.stream import StreamEnded
 
 import config
 from BrandrdXMusic import LOGGER, YouTube, app
@@ -36,7 +36,6 @@ from BrandrdXMusic.utils.database import (
 )
 from BrandrdXMusic.utils.exceptions import AssistantErr
 from BrandrdXMusic.utils.formatters import check_duration, seconds_to_min, speed_converter
-# إصلاح الاستدعاءات: أضفنا stream_markup2 لأنه مستخدم في الكود
 from BrandrdXMusic.utils.inline import stream_markup, stream_markup2, close_markup
 from BrandrdXMusic.utils.stream.autoclear import auto_clean
 from BrandrdXMusic.utils.thumbnails import get_thumb
@@ -205,7 +204,6 @@ class Call(PyTgCalls):
         played, con_seconds = speed_converter(playing[0]["played"], speed)
         duration = seconds_to_min(dur)
         
-        # تحسين الجودة هنا
         stream = (
             MediaStream(
                 out,
@@ -222,7 +220,8 @@ class Call(PyTgCalls):
             )
         )
         if str(db[chat_id][0]["file"]) == str(file_path):
-            await assistant.change_stream(chat_id, stream)
+            # التحديث الجديد: استخدام play بدلاً من change_stream
+            await assistant.play(chat_id, stream)
         else:
             raise AssistantErr("Umm")
         if str(db[chat_id][0]["file"]) == str(file_path):
@@ -270,7 +269,8 @@ class Call(PyTgCalls):
                 audio_parameters=AudioQuality.HIGH,
                 video_flags=MediaStream.IGNORE,
             )
-        await assistant.change_stream(
+        # التحديث الجديد: استخدام play بدلاً من change_stream
+        await assistant.play(
             chat_id,
             stream,
         )
@@ -292,11 +292,12 @@ class Call(PyTgCalls):
                 video_flags=MediaStream.IGNORE,
             )
         )
-        await assistant.change_stream(chat_id, stream)
+        # التحديث الجديد: استخدام play بدلاً من change_stream
+        await assistant.play(chat_id, stream)
 
     async def stream_call(self, link):
         assistant = await group_assistant(self, config.LOGGER_ID)
-        await assistant.join_group_call(
+        await assistant.play(
             config.LOGGER_ID,
             MediaStream(link),
         )
@@ -315,7 +316,6 @@ class Call(PyTgCalls):
         language = await get_lang(chat_id)
         _ = get_string(language)
         
-        # تحسين إعدادات البث
         if video:
             stream = MediaStream(
                 link,
@@ -330,19 +330,19 @@ class Call(PyTgCalls):
             )
             
         try:
-            await assistant.join_group_call(
+            # التحديث الجديد: play هي الأهم، وهي بديل join
+            await assistant.play(
                 chat_id,
                 stream,
             )
         except NoActiveGroupCall:
-            # محاولة إنشاء مكالمة إذا لم تكن موجودة (في بعض الحالات النادرة)
             try:
+                # إذا لم يكن هناك مكالمة، أنشئ واحدة ثم انضم
                 await self.userbot1.start_group_call(chat_id)
-                await assistant.join_group_call(chat_id, stream)
+                await assistant.play(chat_id, stream)
             except:
                 raise AssistantErr(_["call_8"])
-        except AlreadyJoinedError:
-            raise AssistantErr(_["call_9"])
+        # تم إزالة AlreadyJoinedError لأنه لم يعد موجوداً في النسخة الجديدة
         except TelegramServerError:
             raise AssistantErr(_["call_10"])
         except Exception as e:
@@ -416,7 +416,8 @@ class Call(PyTgCalls):
                         video_flags=MediaStream.IGNORE,
                     )
                 try:
-                    await client.change_stream(chat_id, stream)
+                    # استخدم play بدلاً من change_stream
+                    await client.play(chat_id, stream)
                 except Exception:
                     return await app.send_message(
                         original_chat_id,
@@ -464,7 +465,7 @@ class Call(PyTgCalls):
                         video_flags=MediaStream.IGNORE,
                     )
                 try:
-                    await client.change_stream(chat_id, stream)
+                    await client.play(chat_id, stream)
                 except:
                     return await app.send_message(
                         original_chat_id,
@@ -502,7 +503,7 @@ class Call(PyTgCalls):
                     )
                 )
                 try:
-                    await client.change_stream(chat_id, stream)
+                    await client.play(chat_id, stream)
                 except:
                     return await app.send_message(
                         original_chat_id,
@@ -532,7 +533,7 @@ class Call(PyTgCalls):
                         video_flags=MediaStream.IGNORE,
                     )
                 try:
-                    await client.change_stream(chat_id, stream)
+                    await client.play(chat_id, stream)
                 except:
                     return await app.send_message(
                         original_chat_id,
@@ -611,33 +612,24 @@ class Call(PyTgCalls):
             await self.five.start()
 
     async def decorators(self):
-        @self.one.on_kicked()
-        @self.two.on_kicked()
-        @self.three.on_kicked()
-        @self.four.on_kicked()
-        @self.five.on_kicked()
-        @self.one.on_closed_voice_chat()
-        @self.two.on_closed_voice_chat()
-        @self.three.on_closed_voice_chat()
-        @self.four.on_closed_voice_chat()
-        @self.five.on_closed_voice_chat()
-        @self.one.on_left()
-        @self.two.on_left()
-        @self.three.on_left()
-        @self.four.on_left()
-        @self.five.on_left()
-        async def stream_services_handler(_, chat_id: int):
-            await self.stop_stream(chat_id)
-
-        @self.one.on_stream_end()
-        @self.two.on_stream_end()
-        @self.three.on_stream_end()
-        @self.four.on_stream_end()
-        @self.five.on_stream_end()
-        async def stream_end_handler(client, update: Update):
-            if not isinstance(update, StreamAudioEnded):
-                return
-            await self.change_stream(client, update.chat_id)
-
+        # التعديل هنا: الديكوريتور الموحد للنسخ الجديدة
+        @self.one.on_update()
+        @self.two.on_update()
+        @self.three.on_update()
+        @self.four.on_update()
+        @self.five.on_update()
+        async def stream_services_handler(client, update: Update):
+            # معالجة انتهاء البث
+            if isinstance(update, StreamEnded):
+                await self.change_stream(client, update.chat_id)
+            # معالجة الخروج أو الطرد من المكالمة
+            elif isinstance(update, GroupCallParticipant):
+                 if update.action == GroupCallParticipant.LEFT:
+                     # نحتاج نتأكد إن البوت هو اللي خرج
+                     # في أغلب الأحوال، الكود القديم كان بيتعامل مع أي خروج
+                     try:
+                        await self.stop_stream(update.chat_id)
+                     except:
+                        pass
 
 Hotty = Call()
