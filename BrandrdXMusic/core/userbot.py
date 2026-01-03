@@ -1,11 +1,20 @@
 import asyncio
 from pyrogram import Client
+
 import config
-from ..logging import LOGGER
+from BrandrdXMusic.logging import LOGGER
+
+# =====================
+# Globals
+# =====================
 
 assistants = []
 assistantids = []
 
+
+# =====================
+# Userbot Class
+# =====================
 
 class Userbot:
     def __init__(self):
@@ -44,176 +53,159 @@ class Userbot:
             session_string=str(config.STRING5),
         )
 
-    async def start(self):
-        LOGGER(__name__).info("جاري تشغيل الحسابات المساعدة...")
+    # =====================
+    # Start Assistants
+    # =====================
 
-        # =====================
-        # الحساب الأول
-        # =====================
+    async def start(self):
+        LOGGER(__name__).info("🚀 جاري تشغيل الحسابات المساعدة...")
+
+        # ========= Assistant 1 =========
         if config.STRING1:
             try:
                 await self.one.start()
+                me = await self.one.get_me()
+
+                self.one.id = me.id
+                self.one.name = me.mention
+                self.one.username = me.username
+
+                if me.id not in assistantids:
+                    assistants.append(1)
+                    assistantids.append(me.id)
+
                 try:
                     await self.one.join_chat(config.LOGGER_ID)
                     await self.one.send_message(
                         config.LOGGER_ID,
-                        "تم تشغيل الحساب المساعد الأول"
+                        "✅ تم تشغيل الحساب المساعد الأول"
                     )
                 except Exception:
-                    LOGGER(__name__).warning(
-                        "الحساب المساعد 1 لم يتمكن من دخول جروب السجل"
-                    )
+                    LOGGER(__name__).warning("⚠️ المساعد 1 لم يدخل جروب السجل")
 
-                assistants.append(1)
+                LOGGER(__name__).info(f"✅ المساعد الأول شغال | {self.one.name}")
 
-                me = await self.one.get_me()
-                self.one.id = me.id
-                self.one.name = me.mention
-                self.one.username = me.username
-                assistantids.append(me.id)
-
-                LOGGER(__name__).info(
-                    f"تم تشغيل المساعد الأول | {self.one.name}"
-                )
             except Exception as e:
-                LOGGER(__name__).error(
-                    f"فشل تشغيل الحساب المساعد الأول | {e}"
-                )
+                LOGGER(__name__).error(f"❌ فشل تشغيل المساعد الأول | {e}")
 
-        # =====================
-        # الحساب الثاني
-        # =====================
+        # ========= Assistant 2 =========
         if config.STRING2:
             try:
                 await self.two.start()
+                me = await self.two.get_me()
+
+                self.two.id = me.id
+                self.two.name = me.mention
+                self.two.username = me.username
+
+                if me.id not in assistantids:
+                    assistants.append(2)
+                    assistantids.append(me.id)
+
                 try:
                     await self.two.join_chat(config.LOGGER_ID)
                     await self.two.send_message(
                         config.LOGGER_ID,
-                        "تم تشغيل الحساب المساعد الثاني"
+                        "✅ تم تشغيل الحساب المساعد الثاني"
                     )
                 except Exception:
-                    LOGGER(__name__).warning(
-                        "الحساب المساعد 2 لم يتمكن من دخول جروب السجل"
-                    )
+                    LOGGER(__name__).warning("⚠️ المساعد 2 لم يدخل جروب السجل")
 
-                assistants.append(2)
+                LOGGER(__name__).info(f"✅ المساعد الثاني شغال | {self.two.name}")
 
-                me = await self.two.get_me()
-                self.two.id = me.id
-                self.two.name = me.mention
-                self.two.username = me.username
-                assistantids.append(me.id)
-
-                LOGGER(__name__).info(
-                    f"تم تشغيل المساعد الثاني | {self.two.name}"
-                )
             except Exception as e:
-                LOGGER(__name__).error(
-                    f"فشل تشغيل الحساب المساعد الثاني | {e}"
-                )
+                LOGGER(__name__).error(f"❌ فشل تشغيل المساعد الثاني | {e}")
 
-        # =====================
-        # الحساب الثالث
-        # =====================
+        # ========= Assistant 3 =========
         if config.STRING3:
             try:
                 await self.three.start()
+                me = await self.three.get_me()
+
+                self.three.id = me.id
+                self.three.name = me.mention
+                self.three.username = me.username
+
+                if me.id not in assistantids:
+                    assistants.append(3)
+                    assistantids.append(me.id)
+
                 try:
                     await self.three.join_chat(config.LOGGER_ID)
                     await self.three.send_message(
                         config.LOGGER_ID,
-                        "تم تشغيل الحساب المساعد الثالث"
+                        "✅ تم تشغيل الحساب المساعد الثالث"
                     )
                 except Exception:
-                    LOGGER(__name__).warning(
-                        "الحساب المساعد 3 لم يتمكن من دخول جروب السجل"
-                    )
+                    LOGGER(__name__).warning("⚠️ المساعد 3 لم يدخل جروب السجل")
 
-                assistants.append(3)
+                LOGGER(__name__).info(f"✅ المساعد الثالث شغال | {self.three.name}")
 
-                me = await self.three.get_me()
-                self.three.id = me.id
-                self.three.name = me.mention
-                self.three.username = me.username
-                assistantids.append(me.id)
-
-                LOGGER(__name__).info(
-                    f"تم تشغيل المساعد الثالث | {self.three.name}"
-                )
             except Exception as e:
-                LOGGER(__name__).error(
-                    f"فشل تشغيل الحساب المساعد الثالث | {e}"
-                )
+                LOGGER(__name__).error(f"❌ فشل تشغيل المساعد الثالث | {e}")
 
-        # =====================
-        # الحساب الرابع
-        # =====================
+        # ========= Assistant 4 =========
         if config.STRING4:
             try:
                 await self.four.start()
+                me = await self.four.get_me()
+
+                self.four.id = me.id
+                self.four.name = me.mention
+                self.four.username = me.username
+
+                if me.id not in assistantids:
+                    assistants.append(4)
+                    assistantids.append(me.id)
+
                 try:
                     await self.four.join_chat(config.LOGGER_ID)
                     await self.four.send_message(
                         config.LOGGER_ID,
-                        "تم تشغيل الحساب المساعد الرابع"
+                        "✅ تم تشغيل الحساب المساعد الرابع"
                     )
                 except Exception:
-                    LOGGER(__name__).warning(
-                        "الحساب المساعد 4 لم يتمكن من دخول جروب السجل"
-                    )
+                    LOGGER(__name__).warning("⚠️ المساعد 4 لم يدخل جروب السجل")
 
-                assistants.append(4)
+                LOGGER(__name__).info(f"✅ المساعد الرابع شغال | {self.four.name}")
 
-                me = await self.four.get_me()
-                self.four.id = me.id
-                self.four.name = me.mention
-                self.four.username = me.username
-                assistantids.append(me.id)
-
-                LOGGER(__name__).info(
-                    f"تم تشغيل المساعد الرابع | {self.four.name}"
-                )
             except Exception as e:
-                LOGGER(__name__).error(
-                    f"فشل تشغيل الحساب المساعد الرابع | {e}"
-                )
+                LOGGER(__name__).error(f"❌ فشل تشغيل المساعد الرابع | {e}")
 
-        # =====================
-        # الحساب الخامس
-        # =====================
+        # ========= Assistant 5 =========
         if config.STRING5:
             try:
                 await self.five.start()
+                me = await self.five.get_me()
+
+                self.five.id = me.id
+                self.five.name = me.mention
+                self.five.username = me.username
+
+                if me.id not in assistantids:
+                    assistants.append(5)
+                    assistantids.append(me.id)
+
                 try:
                     await self.five.join_chat(config.LOGGER_ID)
                     await self.five.send_message(
                         config.LOGGER_ID,
-                        "تم تشغيل الحساب المساعد الخامس"
+                        "✅ تم تشغيل الحساب المساعد الخامس"
                     )
                 except Exception:
-                    LOGGER(__name__).warning(
-                        "الحساب المساعد 5 لم يتمكن من دخول جروب السجل"
-                    )
+                    LOGGER(__name__).warning("⚠️ المساعد 5 لم يدخل جروب السجل")
 
-                assistants.append(5)
+                LOGGER(__name__).info(f"✅ المساعد الخامس شغال | {self.five.name}")
 
-                me = await self.five.get_me()
-                self.five.id = me.id
-                self.five.name = me.mention
-                self.five.username = me.username
-                assistantids.append(me.id)
-
-                LOGGER(__name__).info(
-                    f"تم تشغيل المساعد الخامس | {self.five.name}"
-                )
             except Exception as e:
-                LOGGER(__name__).error(
-                    f"فشل تشغيل الحساب المساعد الخامس | {e}"
-                )
+                LOGGER(__name__).error(f"❌ فشل تشغيل المساعد الخامس | {e}")
+
+    # =====================
+    # Stop Assistants
+    # =====================
 
     async def stop(self):
-        LOGGER(__name__).info("جاري إيقاف الحسابات المساعدة...")
+        LOGGER(__name__).info("🛑 جاري إيقاف الحسابات المساعدة...")
 
         try:
             if config.STRING1:
