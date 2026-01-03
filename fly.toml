@@ -1,9 +1,5 @@
 app = "brandrdxmusic-x46dna"
 primary_region = "cdg"
-kill_timeout = 600
-
-[experimental]
-  auto_rollback = true
 
 [build]
   dockerfile = "Dockerfile"
