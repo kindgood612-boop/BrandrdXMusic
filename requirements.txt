@@ -41,3 +41,4 @@ urllib3
 pytz
 python-dateutil
 regex
+g4f
