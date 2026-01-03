@@ -6,7 +6,7 @@ from pyrogram.errors import FloodWait
 
 from BrandrdXMusic import app
 from BrandrdXMusic.misc import SUDOERS
-from BrandrdXMusic.utils.database import (
+from BrandrdXMusic.core.database import (
     get_active_chats,
     get_authuser_names,
     get_client,
