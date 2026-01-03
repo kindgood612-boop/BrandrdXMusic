@@ -6,7 +6,7 @@ from pyrogram.types import Message
 
 from BrandrdXMusic import app
 from BrandrdXMusic.misc import SUDOERS
-from BrandrdXMusic.core.decorators.language import language
+from BrandrdXMusic.utils.decorators.language import language
 
 
 def testspeed(m, _):
