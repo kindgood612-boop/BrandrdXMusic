@@ -4,8 +4,8 @@ httpx
 apscheduler
 
 tgcrypto
-pyrogram>=2.0.0
-py-tgcalls==2.2.8
+pyrogram==2.0.106
+py-tgcalls==3.0.0.dev1
 
 motor
 pymongo
