@@ -1,21 +1,30 @@
 from typing import Union
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 from BrandrdXMusic import app
 from config import SUPPORT_CHAT
 
-# الروابط الجديدة
+# =======================
+# Static Links
+# =======================
+
 CHANNEL_LINK = "https://t.me/SourceBoda"
-OWNER_LINK = "https://t.me/S_G0C7"  # تم تحديث رابط المطور هنا
+OWNER_LINK = "https://t.me/S_G0C7"
+
+
+# =======================
+# Queue Info Markup
+# =======================
 
 def queue_markup(
     _,
     DURATION,
     CPLAY,
     videoid,
-    played: Union[bool, int] = None,
-    dur: Union[bool, int] = None,
+    played: Union[int, bool] = None,
+    dur: Union[int, bool] = None,
 ):
-    not_dur = [
+    no_duration = [
         [
             InlineKeyboardButton(
                 text=_["QU_B_1"],
@@ -27,12 +36,13 @@ def queue_markup(
             ),
         ]
     ]
-    dur = [
+
+    with_duration = [
         [
             InlineKeyboardButton(
                 text=_["QU_B_2"].format(played, dur),
                 callback_data="GetTimer",
-            )
+            ),
         ],
         [
             InlineKeyboardButton(
@@ -45,12 +55,18 @@ def queue_markup(
             ),
         ],
     ]
-    upl = InlineKeyboardMarkup(not_dur if DURATION == "Unknown" else dur)
-    return upl
 
+    return InlineKeyboardMarkup(
+        no_duration if DURATION == "Unknown" else with_duration
+    )
+
+
+# =======================
+# Queue Back Button
+# =======================
 
 def queue_back_markup(_, CPLAY):
-    upl = InlineKeyboardMarkup(
+    return InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
@@ -64,60 +80,68 @@ def queue_back_markup(_, CPLAY):
             ]
         ]
     )
-    return upl
 
+
+# =======================
+# Admin Quick Actions (Running Stream)
+# =======================
 
 def aq_markup(_, chat_id):
-    buttons = [
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}"),
-            InlineKeyboardButton(text="II", callback_data=f"ADMIN Pause|{chat_id}"),
-            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
-            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
-        ],
-        [
-            InlineKeyboardButton(
-                text="「𝗼𝘄𝗻𝗲𝗿」", url=OWNER_LINK
-            ),
-            InlineKeyboardButton(
-                text="「قناة السورس 」", url=CHANNEL_LINK
-            ),
-        ],
-        [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
-    ]
-    return buttons
+            [
+                InlineKeyboardButton("▷", callback_data=f"ADMIN Resume|{chat_id}"),
+                InlineKeyboardButton("II", callback_data=f"ADMIN Pause|{chat_id}"),
+                InlineKeyboardButton("‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                InlineKeyboardButton("▢", callback_data=f"ADMIN Stop|{chat_id}"),
+            ],
+            [
+                InlineKeyboardButton("「𝗼𝘄𝗻𝗲𝗿」", url=OWNER_LINK),
+                InlineKeyboardButton("「قناة السورس」", url=CHANNEL_LINK),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=_["CLOSE_BUTTON"],
+                    callback_data="close",
+                )
+            ],
+        ]
+    )
 
+
+# =======================
+# Queue Controller Markup
+# =======================
 
 def queuemarkup(_, vidid, chat_id):
-    buttons = [
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton(
-                text="▷", callback_data=f"ADMIN Resume|{chat_id}"
-            ),
-            InlineKeyboardButton(
-                text="II", callback_data=f"ADMIN Pause|{chat_id}",
-            ),
-            InlineKeyboardButton(
-                text="↻", callback_data=f"ADMIN Replay|{chat_id}"
-            ),
-        ],
-        [
-            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
-            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}"),
-        ],
-        [
-            InlineKeyboardButton(
-                text=_["S_B_5"], # زر إضافة البوت
-                url=f"https://t.me/{app.username}?startgroup=true",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="قناة السورس",
-                url=CHANNEL_LINK,
-            ),
-        ],
-        [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")],
-    ]
-
-    return buttons
+            [
+                InlineKeyboardButton("▷", callback_data=f"ADMIN Resume|{chat_id}"),
+                InlineKeyboardButton("II", callback_data=f"ADMIN Pause|{chat_id}"),
+                InlineKeyboardButton("↻", callback_data=f"ADMIN Replay|{chat_id}"),
+            ],
+            [
+                InlineKeyboardButton("‣‣I", callback_data=f"ADMIN Skip|{chat_id}"),
+                InlineKeyboardButton("▢", callback_data=f"ADMIN Stop|{chat_id}"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=_["S_B_5"],
+                    url=f"https://t.me/{app.username}?startgroup=true",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="قناة السورس",
+                    url=CHANNEL_LINK,
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=_["CLOSE_BUTTON"],
+                    callback_data="close",
+                )
+            ],
+        ]
+    )
