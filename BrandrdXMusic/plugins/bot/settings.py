@@ -11,7 +11,7 @@ from pyrogram.types import (
 )
 
 from BrandrdXMusic import app
-from BrandrdXMusic.utils.database import (
+from BrandrdXMusic.core.database import (
     add_nonadmin_chat,
     get_authuser,
     get_authuser_names,
@@ -403,3 +403,4 @@ async def vote_change(client, CallbackQuery, _):
         )
     except MessageNotModified:
         return
+
