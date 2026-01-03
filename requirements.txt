@@ -31,3 +31,4 @@ telethon
 SafoneAPI
 MukeshAPI
 openai
+deep-translator
