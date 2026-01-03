@@ -4,7 +4,7 @@ from pyrogram.types import Message, CallbackQuery
 from BrandrdXMusic import app
 from BrandrdXMusic.core.call import Hotty
 from BrandrdXMusic.misc import SUDOERS, db
-from BrandrdXMusic.core.decorators import AdminRightsCheck
+from BrandrdXMusic.utils.decorators import AdminRightsCheck
 from BrandrdXMusic.core.database import is_active_chat, is_nonadmin_chat
 from BrandrdXMusic.utils.decorators.language import languageCB
 from BrandrdXMusic.utils.inline import close_markup, speed_markup
