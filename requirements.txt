@@ -63,4 +63,3 @@ search_engine_parser
 
 # ===== Telegraph =====
 telegraph
-pykeyboard
