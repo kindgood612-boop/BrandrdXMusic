@@ -2,7 +2,7 @@ from os import path
 
 from yt_dlp import YoutubeDL
 
-from BrandrdXMusic.core.formatters import seconds_to_min
+from BrandrdXMusic.utils.formatters import seconds_to_min
 
 
 class SoundAPI:
