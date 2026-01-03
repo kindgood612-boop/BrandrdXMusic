@@ -2,7 +2,7 @@ from os import path
 
 from yt_dlp import YoutubeDL
 
-from BrandrdXMusic.utils.formatters import seconds_to_min
+from BrandrdXMusic.core.formatters import seconds_to_min
 
 
 class SoundAPI:
@@ -27,8 +27,10 @@ class SoundAPI:
             info = d.extract_info(url)
         except:
             return False
+
         xyz = path.join("downloads", f"{info['id']}.{info['ext']}")
         duration_min = seconds_to_min(info["duration"])
+
         track_details = {
             "title": info["title"],
             "duration_sec": info["duration"],
@@ -36,4 +38,5 @@ class SoundAPI:
             "uploader": info["uploader"],
             "filepath": xyz,
         }
+
         return track_details, xyz
