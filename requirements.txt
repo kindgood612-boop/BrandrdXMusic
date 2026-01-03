@@ -26,5 +26,5 @@ MukeshAPI
 openai
 httpx
 tgcrypto
-pyrogram
+pyrogram==2.0.0
 py-tgcalls>=2.0.0
