@@ -12,7 +12,6 @@ from pytgcalls.exceptions import (
     PyTgCallsAlreadyRunning,
 )
 from pytgcalls.types import MediaStream, AudioQuality, VideoQuality, Update
-from pytgcalls.types.stream import StreamAudioEnded
 
 import config
 from BrandrdXMusic import LOGGER, app, YouTube
@@ -283,27 +282,27 @@ class Call:
 
         @self.one.on_stream_end()
         async def _(client, update: Update):
-            if isinstance(update, StreamAudioEnded):
+            if update.status == "ended":
                 await self.change_stream(client, update.chat_id)
 
         @self.two.on_stream_end()
         async def _(client, update: Update):
-            if isinstance(update, StreamAudioEnded):
+            if update.status == "ended":
                 await self.change_stream(client, update.chat_id)
 
         @self.three.on_stream_end()
         async def _(client, update: Update):
-            if isinstance(update, StreamAudioEnded):
+            if update.status == "ended":
                 await self.change_stream(client, update.chat_id)
 
         @self.four.on_stream_end()
         async def _(client, update: Update):
-            if isinstance(update, StreamAudioEnded):
+            if update.status == "ended":
                 await self.change_stream(client, update.chat_id)
 
         @self.five.on_stream_end()
         async def _(client, update: Update):
-            if isinstance(update, StreamAudioEnded):
+            if update.status == "ended":
                 await self.change_stream(client, update.chat_id)
 
 
