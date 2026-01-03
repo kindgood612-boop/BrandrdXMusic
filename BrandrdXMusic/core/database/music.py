@@ -98,3 +98,5 @@ async def remove_private_chat(chat_id: int):
     if not is_served:
         return
     return await privatedb.delete_one({"chat_id": chat_id})
+async def music_on(chat_id: int):
+    return True
