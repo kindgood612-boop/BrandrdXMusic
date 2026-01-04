@@ -14,7 +14,7 @@ class Hotty(Client):
             bot_token=config.BOT_TOKEN,
             in_memory=True,
             parse_mode=ParseMode.HTML,
-            # 👇 السطر ده هو السحر اللي بيحمل الملفات تلقائي وبدون تعارض
+            # 👇 السطر ده هو اللي هيخلي البوت يشتغل ويرد على الأوامر
             plugins=dict(root="BrandrdXMusic.plugins"),
         )
 
@@ -32,7 +32,7 @@ class Hotty(Client):
             )
         except Exception:
             pass
-
+        
         LOGGER(__name__).info(f"تم بدء تشغيل بوت الميوزك باسم {self.name}")
 
     async def stop(self):
