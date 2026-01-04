@@ -1,23 +1,16 @@
-import os
 import asyncio
+import os
 from datetime import datetime, timedelta
 
 from pyrogram import Client
 from pyrogram.raw.functions.phone import CreateGroupCall
 from pyrogram.errors import ChatAdminRequired, UserAlreadyParticipant, UserNotParticipant
 
-# =======================
-# PyTgCalls v2.2.8 Imports
-# =======================
+# ==========================================================
+# تعديلات PyTgCalls v2.2.9 (النسخة الحديثة بنظام MediaStream)
+# ==========================================================
 from pytgcalls import PyTgCalls
-from pytgcalls.types import Update
-from pytgcalls.types.input_stream import InputAudioStream, InputVideoStream
-from pytgcalls.types.input_stream.quality import (
-    HighQualityAudio,
-    HighQualityVideo,
-    LowQualityVideo,
-    MediumQualityVideo,
-)
+from pytgcalls.types import Update, MediaStream, AudioQuality, VideoQuality, StreamEnded
 from pytgcalls.exceptions import (
     NoActiveGroupCall,
     AlreadyJoinedError,
@@ -73,7 +66,7 @@ async def _clear_(chat_id: int):
 
 
 # =======================
-# Call Class (v2 Compatible)
+# Call Class (Updated for v2.2.9)
 # =======================
 
 class Call:
@@ -110,8 +103,7 @@ class Call:
             session_string=str(config.STRING5),
         )
 
-        # -------- PyTgCalls Clients (v2.2.8) --------
-        # cache_duration helps in v2 stability
+        # -------- PyTgCalls Clients --------
         self.one = PyTgCalls(self.userbot1, cache_duration=100)
         self.two = PyTgCalls(self.userbot2, cache_duration=100)
         self.three = PyTgCalls(self.userbot3, cache_duration=100)
@@ -155,13 +147,14 @@ class Call:
         assistant = await group_assistant(self, chat_id)
         try:
             await _clear_(chat_id)
-            await assistant.leave_group_call(chat_id)
+            # تم التحديث: leave_call بدلاً من leave_group_call
+            await assistant.leave_call(chat_id)
         except Exception:
             pass
 
 
     # =======================
-    # Join Call (v2 Logic)
+    # Join Call (v2.2.9 Logic)
     # =======================
 
     async def join_call(self, chat_id: int, original_chat_id: int, link: str, video: bool = False):
@@ -172,35 +165,34 @@ class Call:
         if not link.startswith("http") and not os.path.isfile(link):
             raise AssistantErr(_["call_7"])
 
-        # إعداد الـ Stream حسب PyTgCalls v2
+        # إعداد الـ Stream باستخدام MediaStream
         if video:
-            stream = InputVideoStream(
+            stream = MediaStream(
                 link,
-                video_quality=MediumQualityVideo(),
-                audio_quality=HighQualityAudio(),
+                audio_parameters=AudioQuality.HIGH,
+                video_parameters=VideoQuality.SD_480p,
             )
         else:
-            stream = InputAudioStream(
+            stream = MediaStream(
                 link,
-                quality=HighQualityAudio(),
+                audio_parameters=AudioQuality.HIGH,
+                video_flags=MediaStream.IGNORE,
             )
 
         try:
-            # في v2 الأمر اسمه join_group_call مش play
-            await assistant.join_group_call(
+            # تم التحديث: play بدلاً من join_group_call
+            await assistant.play(
                 chat_id,
                 stream,
-                stream_type="video" if video else "audio",
             )
 
         except NoActiveGroupCall:
-            # محاولة إنشاء المكالمة يدوياً عبر Pyrogram
+            # محاولة الإنشاء يدوياً ثم التشغيل
             try:
                 await self.create_call(chat_id)
-                await assistant.join_group_call(
+                await assistant.play(
                     chat_id,
                     stream,
-                    stream_type="video" if video else "audio",
                 )
             except Exception:
                 raise AssistantErr(_["call_8"])
@@ -221,7 +213,6 @@ class Call:
         if await is_autoend():
             asyncio.create_task(self.autoend_watcher(chat_id))
 
-    # دالة مساعدة لإنشاء المكالمة (لأن v2 لا ينشئها تلقائياً)
     async def create_call(self, chat_id):
         try:
             await app.invoke(
@@ -234,7 +225,7 @@ class Call:
             pass
 
     # =======================
-    # Change Stream (v2 Logic)
+    # Change Stream (v2.2.9 Logic)
     # =======================
 
     async def change_stream(self, client: PyTgCalls, chat_id: int):
@@ -267,20 +258,23 @@ class Call:
             await self.stop_stream(chat_id)
             return
 
+        # إعداد الـ Stream
         if streamtype == "video":
-            stream = InputVideoStream(
+            stream = MediaStream(
                 link,
-                video_quality=MediumQualityVideo(),
-                audio_quality=HighQualityAudio(),
+                audio_parameters=AudioQuality.HIGH,
+                video_parameters=VideoQuality.SD_480p,
             )
         else:
-            stream = InputAudioStream(
+            stream = MediaStream(
                 link,
-                quality=HighQualityAudio(),
+                audio_parameters=AudioQuality.HIGH,
+                video_flags=MediaStream.IGNORE,
             )
 
         try:
-            await client.change_stream(
+            # تم التحديث: play
+            await client.play(
                 chat_id,
                 stream,
             )
@@ -318,11 +312,11 @@ class Call:
 
 
     # =======================
-    # Start & Decorators (SAFE)
+    # Start & Decorators (v2.2.9 Logic)
     # =======================
 
     async def start(self):
-        LOGGER(__name__).info("Starting PyTgCalls Clients (v2.2.8)...")
+        LOGGER(__name__).info("Starting PyTgCalls Clients (v2.2.9)...")
 
         for idx, client in enumerate(
             [self.one, self.two, self.three, self.four, self.five], start=1
@@ -334,14 +328,15 @@ class Call:
                 LOGGER(__name__).warning(f"⚠️ Assistant {idx} skipped: {e}")
 
     async def decorators(self):
-        # في v2.2.8 بنستخدم on_stream_end بشكل مباشر
         for client in [self.one, self.two, self.three, self.four, self.five]:
-            @client.on_stream_end()
+            # تم التحديث: استخدام on_update و StreamEnded
+            @client.on_update()
             async def _(c, update: Update):
-                try:
-                    await self.change_stream(c, update.chat_id)
-                except:
-                    pass
+                if isinstance(update, StreamEnded):
+                    try:
+                        await self.change_stream(c, update.chat_id)
+                    except:
+                        pass
 
 
 # =======================
