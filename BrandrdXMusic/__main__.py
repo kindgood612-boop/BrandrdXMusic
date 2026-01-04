@@ -31,9 +31,7 @@ async def init():
         config.STRING4,
         config.STRING5,
     ]):
-        LOGGER(__name__).error(
-            "❌ لم يتم العثور على أي كود سيشن للحسابات المساعدة"
-        )
+        LOGGER(__name__).error("❌ لم يتم العثور على أي كود سيشن للحسابات المساعدة")
         return
 
     # =======================
@@ -44,14 +42,18 @@ async def init():
     try:
         for user_id in await get_gbanned():
             BANNED_USERS.add(int(user_id))
-
         for user_id in await get_banned_users():
             BANNED_USERS.add(int(user_id))
     except Exception as e:
         LOGGER(__name__).warning(f"Banned users load skipped: {e}")
 
     # =======================
-    # 🔥 LOAD PLUGINS FIRST
+    # ✅ START MAIN BOT FIRST
+    # =======================
+    await app.start()
+
+    # =======================
+    # ✅ LOAD PLUGINS AFTER app.start()
     # =======================
     for module_name in ALL_MODULES:
         try:
@@ -62,11 +64,6 @@ async def init():
             )
 
     LOGGER("BrandrdXMusic.plugins").info("✅ تم استدعاء ملفات البوت بنجاح")
-
-    # =======================
-    # Start main bot
-    # =======================
-    await app.start()
 
     # =======================
     # Start userbot + calls
@@ -89,7 +86,7 @@ async def init():
     )
 
     # =======================
-    # Idle (IMPORTANT)
+    # Idle
     # =======================
     await idle()
 
