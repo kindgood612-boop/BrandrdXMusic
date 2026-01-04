@@ -1,15 +1,14 @@
-# ==== PATCH for pyrogram GroupcallForbidden ====
+import asyncio
+import importlib
+from pyrogram import idle, filters
 import pyrogram.errors
 
+# ==== PATCH for pyrogram GroupcallForbidden ====
 if not hasattr(pyrogram.errors, "GroupcallForbidden"):
     class GroupcallForbidden(Exception):
         pass
     pyrogram.errors.GroupcallForbidden = GroupcallForbidden
 # =============================================
-
-import asyncio
-import importlib
-from pyrogram import idle
 
 import config
 from BrandrdXMusic import LOGGER, app, userbot
@@ -48,13 +47,20 @@ async def init():
         LOGGER(__name__).warning(f"Banned users load skipped: {e}")
 
     # =======================
-    # ✅ START MAIN BOT FIRST
+    # 🚨 أمر تجربة مباشر (TEST COMMAND)
     # =======================
-    await app.start()
+    # هذا الأمر موجود داخل ملف التشغيل مباشرة لضمان أن البوت يستجيب
+    @app.on_message(filters.command(["test", "تست", "alive"], prefixes=["/", "!", ".", ""]))
+    async def test_command(client, message):
+        await message.reply_text(
+            "✅ **البوت متصل وشغال 100% يا حب!**\n"
+            "المشكلة كانت في ترتيب تحميل الملفات، دلوقتي كله تمام."
+        )
 
     # =======================
-    # ✅ LOAD PLUGINS AFTER app.start()
+    # ✅ LOAD PLUGINS FIRST (قبل التشغيل)
     # =======================
+    # الترتيب ده مهم جداً عشان الأوامر تشتغل
     for module_name in ALL_MODULES:
         try:
             importlib.import_module(f"BrandrdXMusic.plugins.{module_name}")
@@ -66,11 +72,16 @@ async def init():
     LOGGER("BrandrdXMusic.plugins").info("✅ تم استدعاء ملفات البوت بنجاح")
 
     # =======================
-    # Start userbot + calls
+    # ✅ START CLIENTS
     # =======================
-    await userbot.start()
-    await Hotty.start()
-    await Hotty.decorators()
+    await app.start()       
+    await userbot.start()   
+    await Hotty.start()     
+    
+    try:
+        await Hotty.decorators()
+    except Exception as e:
+        LOGGER("CallDecorators").warning(f"Decorators warning: {e}")
 
     # =======================
     # Startup message
@@ -91,12 +102,21 @@ async def init():
     await idle()
 
     # =======================
-    # Graceful shutdown
+    # Graceful shutdown (SAFE MODE)
     # =======================
     LOGGER("BrandrdXMusic").info("🛑 جاري إيقاف البوت...")
-    await Hotty.one.stop()
-    await userbot.stop()
-    await app.stop()
+    
+    try:
+        await Hotty.one.stop()
+    except: pass
+    
+    try:
+        await userbot.stop()
+    except: pass
+    
+    try:
+        await app.stop()
+    except: pass
 
 
 if __name__ == "__main__":
