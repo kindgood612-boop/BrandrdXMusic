@@ -8,13 +8,10 @@ from pyrogram.types import InlineKeyboardMarkup
 from ntgcalls import TelegramServerError
 
 # ====================================================
-# استدعاءات PyTgCalls v2.2.9 (النظام الحديث)
+# إصلاح الاستدعاءات (تم حذف AlreadyJoinedError)
 # ====================================================
 from pytgcalls import PyTgCalls
-from pytgcalls.exceptions import (
-    AlreadyJoinedError,
-    NoActiveGroupCall,
-)
+from pytgcalls.exceptions import NoActiveGroupCall
 from pytgcalls.types import (
     MediaStream,
     AudioQuality,
@@ -220,7 +217,6 @@ class Call:
         played, con_seconds = speed_converter(playing[0]["played"], speed)
         duration = seconds_to_min(dur)
         
-        # استخدام MediaStream المتوافق مع نسختك
         stream = (
             MediaStream(
                 out,
@@ -330,7 +326,6 @@ class Call:
         language = await get_lang(chat_id)
         _ = get_string(language)
         
-        # إعداد الـ Stream
         if video:
             stream = MediaStream(
                 link,
@@ -352,19 +347,16 @@ class Call:
                 )
             )
         try:
-            # استخدام play بدلاً من join_group_call
             await assistant.play(
                 chat_id,
                 stream,
             )
         except NoActiveGroupCall:
             try:
-                # المحاولة مرة أخرى (v2.2.9 غالبًا ما ينشئ المكالمة تلقائيًا)
                 await assistant.play(chat_id, stream)
             except Exception:
                 raise AssistantErr(_["call_8"])
-        except AlreadyJoinedError:
-            raise AssistantErr(_["call_9"])
+        # تم حذف AlreadyJoinedError لأنه لم يعد موجوداً في المكتبة
         except TelegramServerError:
             raise AssistantErr(_["call_10"])
         except Exception as e:
